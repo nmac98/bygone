@@ -1,0 +1,17 @@
+[
+    {
+        "id": "literary",
+        "name": "Literary Dublin",
+        "description": "Description of Literary Dublin"
+    },
+    {
+        "id": "1916",
+        "name": "1916 Rising",
+        "description": "Description of the 1916 Rising."
+    },
+    {
+        "id": "blackhall",
+        "name": "Around Blackhall",
+        "description": "A tour of the sites and history of the areas around Blackhall including Stoneybatter and Smithfield. From the Danes to the Dubliners."
+    }
+]

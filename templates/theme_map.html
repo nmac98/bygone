@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}BYGONE | {{ theme_name }}{% endblock %}
+
+{% block content %}
+<h2>{{ theme_name }}</h2>
+
+<div class="index-container">
+  <!-- Left: Map -->
+    <div id="map" class="theme-map-column">
+        <div class="map-wrapper">
+            {{ map_html | safe }}
+        </div>
+    </div>
+
+  <!-- Right: Themes -->
+    <aside class="theme-info-column">
+        <h2>About {{ theme_name }}</h2>
+    </aside>
+</div>
+
+{% endblock %}

@@ -1,0 +1,21 @@
+{
+    "id": "template",
+    "name": "***",
+    "lat": 53.3429,
+    "lon": -6.254572,
+    "description": "***",
+    "images": [
+        {
+            "file": "***1.jpg",
+            "title": "*** 1 Title",
+            "date": "19XX",
+            "description": "*** 1 Description"
+        },
+        {
+            "file": "***.jpg",
+            "title": "*** Title",
+            "date": "19XX",
+            "description": "*** 2 Description"
+        }
+    ]
+  }

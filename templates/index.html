@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}BYGONE | Home{% endblock %}
+
+{% block content %}
+<div class="index-container">
+  <!-- Left: Map -->
+  <div id="map" class="map-column">
+      <div class="map-wrapper">
+          {{ folium_map | safe }}
+          "Folium map section"
+      </div>
+  </div>
+
+  <!-- Right: Themes -->
+  <aside class="themes-column">
+    <h2>Explore by Theme</h2>
+    <ul class="themes-list">
+      {% for theme in themes %}
+        <li>
+          <a class="theme-btn" href="{{ url_for('theme_map', theme_name=theme.name) }}">
+            {{ theme.name }}
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  </aside>
+</div>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}{{ location.name }} | BYGONE{% endblock %}
+
+{% block content %}
+<div class="index-container">
+    <div class="gallery-column">
+        <h2>{{ location.name }} — Photo Gallery</h2>
+        <div class="gallery">
+            {% for img in location.images %}
+                <a href="/photo/{{ location.id }}/{{ img.file }}">
+                    <img src="/static/images/{{ img.file }}" alt="{{ img.title }}">
+                    <div class="caption">{{ img.title }} ({{ img.date }})</div>
+                </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- RIGHT: INFO + MAP -->
+    <div class="info-column">
+        <h2>About {{ location.name }}</h2>
+        <p>{{ location.description }}</p>
+
+        <div class="map-box">
+            {{ map_html|safe }}
+        </div>
+    </div>
+</div>
+{% endblock %}
