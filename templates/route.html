@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}BYGONE | {{ route_name }}{% endblock %}
+
+{% block content %}
+<h2>{{ route_name }}</h2>
+
+<div class="index-container">
+  <!-- Left: Map -->
+    <div id="map" class="theme-map-column">
+        <div class="map-wrapper">
+            {{ map_html | safe }}
+        </div>
+    </div>
+
+  <!-- Right: Routes -->
+    <aside class="themes-column">
+
+        <h2>{{ route.name }}</h2>
+        <p>{{ route.description }}</p>
+
+        <ul class="themes-list">
+          <li>
+            <a class="theme-btn">
+              Start with an introduction
+            </a>
+          </li>
+            {% for stop in stops %}
+              <li>
+                <a href="{{ url_for('gallery', loc_id=stop.id) }}?route={{ route.id }}" class="theme-btn">
+                  Stop {{ loop.index }}: {{ stop.name }}
+                </a>
+              </li>
+            {% endfor %}
+        </ul>
+
+    </aside>
+</div>
+
+{% endblock %}

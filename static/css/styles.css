@@ -191,3 +191,72 @@ main {
 .theme-btn:hover {
   background: #555;
 }
+
+.stop-button {
+    display: inline-block;
+    text-decoration: none;
+    background-color: #007bff;
+    color: white;
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-weight: bold;
+    transition: background-color 0.2s ease;
+}
+
+.stop-button:hover {
+    background-color: #0056b3;
+}
+
+.next-stop-container {
+    margin-top: 30px;
+    text-align: right;
+}
+
+.next-stop-container.end {
+    text-align: center;
+    color: #555;
+    font-style: italic;
+}
+
+.route-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: rgba(30, 30, 30, 0.9);
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  font-family: "Poppins", sans-serif;
+  font-size: 1rem;
+  z-index: 1000;
+  backdrop-filter: blur(8px);
+  border-top: 2px solid rgba(255, 255, 255, 0.1);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.route-btn {
+  color: #fff;
+  text-decoration: none;
+  font-weight: 500;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.route-btn:hover {
+  opacity: 0.8;
+  transform: translateY(-2px);
+}
+
+.route-btn.disabled {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.route-progress {
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+

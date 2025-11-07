@@ -16,10 +16,10 @@
   <aside class="themes-column">
     <h2>Explore by Theme</h2>
     <ul class="themes-list">
-      {% for theme in themes %}
+      {% for route in routes %}
         <li>
-          <a class="theme-btn" href="{{ url_for('theme_map', theme_name=theme.name) }}">
-            {{ theme.name }}
+          <a class="theme-btn" href="{{ url_for('view_route', route_name=route.name) }}">
+            {{ route.name }}
           </a>
         </li>
       {% endfor %}

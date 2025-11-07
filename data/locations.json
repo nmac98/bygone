@@ -424,5 +424,53 @@
             "description": ""
         }    
     ]
+  },
+    {
+    "id": "isolation",
+    "name": "Old Isolation Hospital",
+    "lat": 53.349062, 
+    "lon": -6.29511,
+    "description": null,
+    "themes": ["Around Parkgate Street"],
+    "images": [
+        {
+            "file": "collins2.jpeg",
+            "title": "Soldiers from 7th Battalion Royal Fusiliers leaving throught the main gate of the Royal Barracks, April 1915.",
+            "date": "April 1915",
+            "description": ""
+        }    
+    ]
+  },
+    {
+    "id": "montpellier",
+    "name": "Montpellier Hill",
+    "lat": 53.348810, 
+    "lon": -6.293169,
+    "description": null,
+    "themes": ["Around Parkgate Street"],
+    "images": [
+        {
+            "file": "collins2.jpeg",
+            "title": "Soldiers from 7th Battalion Royal Fusiliers leaving throught the main gate of the Royal Barracks, April 1915.",
+            "date": "April 1915",
+            "description": ""
+        }    
+    ]
+  },
+    {
+    "id": "mendicity_north",
+    "name": "The Mendicity Institution, from the North Quays",
+    "lat": 53.346988, 
+    "lon": -6.2856,
+    "description": null,
+    "themes": ["Around Parkgate Street"],
+    "images": [
+        {
+            "file": "collins2.jpeg",
+            "title": "Soldiers from 7th Battalion Royal Fusiliers leaving throught the main gate of the Royal Barracks, April 1915.",
+            "date": "April 1915",
+            "description": ""
+        }    
+    ]
   }
 ]

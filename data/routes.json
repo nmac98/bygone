@@ -1,0 +1,59 @@
+[
+    {
+        "id": "parkgate_area",
+        "name": "Around Parkgate Street",
+        "description": "The area around Parkgate Street in Dublin has played a major role in each era of Dublin's history. Enjoy a journey between the sites in the area and step back in time.",
+        "stops": [
+            {
+                "location_id": "isolation",
+                "dialogue": "We start our tour of the area here at the old isolation hospital."
+            },
+            {
+                "location_id": "montpellier",
+                "dialogue": "We are now on Montpellier Hill, supposedly named after a community of French Hugenots who lived here around the ... century."
+            },
+            {
+                "location_id": "mendicity_north",
+                "dialogue": "We are now looking over the liffey, across to the plot of land beyond the bridge. That used to be... and from here, with some imagination and inspiraion from original sources we can imagine one of the battles of 1916"
+            },
+            {
+                "location_id": "collins",
+                "dialogue": "We have now arrived at Collins Barracks..."
+            }
+        ]
+    },
+    {
+        "id": "literary",
+        "name": "Literary Dublin",
+        "description": "Description of Literary Dublin",
+        "stops": [
+            {
+                "location_id": "trinity",
+                "dialogue": "We start our tour of the area here at the old isolation hospital."
+            }
+        ]
+    },
+    {
+        "id": "1916",
+        "name": "1916 Rising",
+        "description": "Description of the 1916 Rising.",
+        "stops": [
+            {
+                "location_id": "gpo",
+                "dialogue": "tbc."
+            },
+            {
+                "location_id": "rcs",
+                "dialogue": "tbc."
+            },
+            {
+                "location_id": "stephens_green",
+                "dialogue": "tbc."
+            },
+            {
+                "location_id": "mendicity",
+                "dialogue": "tbc"
+            }
+        ]
+    }
+]

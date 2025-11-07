@@ -5,7 +5,7 @@
 {% block content %}
 <div class="index-container">
     <div class="gallery-column">
-        <h2>{{ location.name }} — Photo Gallery</h2>
+        <h2>{{ location.name }}</h2>
         <div class="gallery">
             {% for img in location.images %}
                 <a href="/photo/{{ location.id }}/{{ img.file }}">
@@ -24,6 +24,34 @@
         <div class="map-box">
             {{ map_html|safe }}
         </div>
+
     </div>
 </div>
+
+{% if route_id %}
+
+<div class="route-banner">
+    {% if prev_location %}
+        <a href="{{ url_for('gallery', loc_id=prev_location.id) }}?route={{ route_id }}" class="route-btn left">
+            ← {{ prev_location.name }}
+        </a>
+    {% else %}
+        <span class="route-btn left disabled"></span>
+    {% endif %}
+
+    <div class="route_progress">
+        {{ progress }}
+    </div>
+
+    {% if next_location %}
+        <a href="{{ url_for('gallery', loc_id=next_location.id) }}?route={{ route_id }}" class = "route-btn right">
+            {{ next_location.name }} →
+        </a>
+    {% else %}
+        <span class="route-btn right disabled"></span>
+    {% endif %}
+</div>
+
+{% endif %}
+
 {% endblock %}
