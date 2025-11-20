@@ -234,8 +234,6 @@ main {
   z-index: 1000;
   backdrop-filter: blur(8px);
   border-top: 2px solid rgba(255, 255, 255, 0.1);
-  box-sizing: border-box;
-  overflow: hidden;
 }
 
 .route-btn {
