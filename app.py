@@ -3,18 +3,18 @@ import folium
 import json
 import os
 from folium.features import DivIcon
+from config import Config
+from extensions import db, migrate
+from models import Location, RouteStop, Route
+from flask_migrate import Migrate
+
+migrate = Migrate()
 
 app = Flask(__name__)
+app.config.from_object(Config)
 
-# Load locations from JSON once at startup
-with open("data/locations.json", "r") as f:
-    LOCATIONS = json.load(f)
-
-def load_routes():
-    with open(os.path.join('data', 'routes.json')) as f:
-        return json.load(f)
-
-routes = load_routes()
+db.init_app(app)
+migrate.init_app(app, db)
 
 @app.route('/test')
 def test():
@@ -27,13 +27,16 @@ def test_themes():
 @app.route('/')
 def index():
     # Center map on Dublin
+    locations = Location.query.all()
+    routes = Route.query.all()
+    
     m = folium.Map(location=[53.3498, -6.2603], zoom_start=14)
 
-    for loc in LOCATIONS:
-        name = loc["name"]
-        lat, lon = loc["lat"], loc["lon"]
-        main_image = loc["images"][0]["file"]  # first image = cover
-        loc_id = loc["id"]
+    for loc in locations:
+        name = loc.name
+        lat, lon = loc.lat, loc.lon
+        main_image = loc.images[0].file if loc.images else "placeholder.jpg"  # first image = cover
+        loc_id = loc.id
 
         popup_html = f"""
         <b>{name}</b><br>
@@ -52,16 +55,16 @@ def index():
 @app.route("/gallery/<loc_id>")
 def gallery(loc_id):
 
-    loc = next((l for l in LOCATIONS if l["id"] == loc_id), None)
+    loc = Location.query.get(loc_id)
     if not loc:
         abort(404)
 
     # Create a mini folium map
-    m = folium.Map(location=[loc["lat"], loc["lon"]], zoom_start=16)
+    m = folium.Map(location=[loc.lat, loc.lon], zoom_start=16)
     folium.Marker(
-        [loc["lat"], loc["lon"]],
-        popup=loc["name"],
-        tooltip=loc["name"]
+        [loc.lat, loc.lon],
+        popup=loc.name,
+        tooltip=loc.name
     ).add_to(m)
 
     map_html = m._repr_html_()  # generates the <iframe> HTML
@@ -72,50 +75,46 @@ def gallery(loc_id):
     progress = None
 
     if route_id:
-        route = next((r for r in routes if r["id"] == route_id), None)
+        route = Route.query.get(route_id)
         if route:
-            stops = route["stops"]
+            stops = sorted(route.stops, key=lambda s: s.order)
             current_index = next(
-                (i for i, stop in enumerate(stops) if stop["location_id"] == loc_id),
+                (i for i, stop in enumerate(stops) if stop.location_id == loc_id),
                 None
             )
 
             if current_index is not None:
-                dialogue = stops[current_index].get("dialogue", "")
+                dialogue = stops[current_index].dialogue
                 total_stops = len(stops)
                 progress = f"Stop {current_index + 1} of {total_stops}"
 
-                if current_index < len(stops) - 1:
-                    next_id = stops[current_index + 1]["location_id"]
-                    next_location = next(
-                        (l for l in LOCATIONS if l["id"] == next_id),
-                        None
-                    )
+                if current_index < total_stops - 1:
+                    next_location = stops[current_index + 1].location
+
                 if current_index > 0:
-                    prev_id = stops[current_index - 1]["location_id"]
-                    prev_location = next(
-                        (l for l in LOCATIONS if l["id"] == prev_id),
-                        None
-                    )
+                    prev_location = stops[current_index - 1].location
 
     return render_template("gallery.html", location=loc, map_html=map_html, next_location=next_location, prev_location=prev_location, dialogue=dialogue, route_id=route_id, progress=progress)
 
 @app.route('/photo/<loc_id>/<photo_file>')
 def photo_detail(loc_id, photo_file):
     # Find the location
-    loc = next((l for l in LOCATIONS if l["id"] == loc_id), None)
+    loc = Location.query.get(loc_id)
     if not loc:
         abort(404)
 
     # Find index of current photo
-    photos = loc["images"]
-    current_index = next((i for i, p in enumerate(photos) if p["file"] == photo_file), None)
+    photos = loc.images
+    if not photos:
+        abort(404)
+
+    current_index = next((i for i, p in enumerate(photos) if p.file == photo_file), None)
     if current_index is None:
         abort(404)
 
     # Determine previous and next photo files
-    prev_photo = photos[current_index - 1]["file"] if current_index > 0 else None
-    next_photo = photos[current_index + 1]["file"] if current_index < len(photos) - 1 else None
+    prev_photo = photos[current_index - 1].file if current_index > 0 else None
+    next_photo = photos[current_index + 1].file if current_index < len(photos) - 1 else None
 
     return render_template(
         "photo_detail.html",
@@ -127,32 +126,20 @@ def photo_detail(loc_id, photo_file):
 
 @app.route("/route/<route_name>")
 def view_route(route_name):
-    route = next((r for r in routes if r['name'] == route_name), None)
+    route = Route.query.filter_by(name=route_name).first()
     if not route:
         abort(404)
 
-    # Load locations for this route
-    with open(os.path.join('data', 'locations.json')) as f:
-        locations = json.load(f)
+    stops = sorted(route.stops, key=lambda s: s.order)
+    first_loc = stops[0].location
+    m = folium.Map(location=[first_loc.lat, first_loc.lon], zoom_start=14)
 
-    stops = []
-    for stop in route['stops']:
-        loc = next((l for l in locations if l['id'] == stop['location_id']), None)
-        if loc:
-            loc_copy = loc.copy()
-            loc_copy['dialogue'] = stop['dialogue']
-            stops.append(loc_copy)
-
-    # Build Folium map with path line
-    m = folium.Map(location=[stops[0]['lat'], stops[0]['lon']], zoom_start=14)
-
-    coordinates = []
     for i, stop in enumerate(stops, start=1):
-        coordinates.append((stop['lat'], stop['lon']))
+        loc = stop.location
         folium.Marker(
-            [stop['lat'], stop['lon']],
-            popup=f"<b>{stop['name']}</b><br>{stop['dialogue']}",
-            tooltip=stop['name'],
+            [loc.lat, loc.lon],
+            popup=f"<b>{loc.name}</b><br>{stop.dialogue}",
+            tooltip=loc.name,
             icon=DivIcon(
                 icon_size=(30, 30),
                 icon_anchor=(15, 15),
