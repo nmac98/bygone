@@ -18,7 +18,7 @@
     <ul class="themes-list">
       {% for route in routes %}
         <li>
-          <a class="theme-btn" href="{{ url_for('view_route', route_name=route.name) }}">
+          <a class="theme-btn" href="{{ url_for('routes_app.view_route', route_name=route.name) }}">
             {{ route.name }}
           </a>
         </li>

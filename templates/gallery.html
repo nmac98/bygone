@@ -32,7 +32,7 @@
 
 <div class="route-banner">
     {% if prev_location %}
-        <a href="{{ url_for('gallery', loc_id=prev_location.id) }}?route={{ route_id }}" class="route-btn left">
+        <a href="{{ url_for('locations.gallery', loc_id=prev_location.id) }}?route={{ route_id }}" class="route-btn left">
             ← {{ prev_location.name }}
         </a>
     {% else %}
@@ -44,7 +44,7 @@
     </div>
 
     {% if next_location %}
-        <a href="{{ url_for('gallery', loc_id=next_location.id) }}?route={{ route_id }}" class = "route-btn right">
+        <a href="{{ url_for('locations.gallery', loc_id=next_location.id) }}?route={{ route_id }}" class = "route-btn right">
             {{ next_location.name }} →
         </a>
     {% else %}

@@ -27,7 +27,7 @@
           </li>
             {% for stop in stops %}
               <li>
-                <a href="{{ url_for('gallery', loc_id=stop.location.id) }}?route={{ route.id }}" class="theme-btn">
+                <a href="{{ url_for('locations.gallery', loc_id=stop.location.id) }}?route={{ route.id }}" class="theme-btn">
                   Stop {{ loop.index }}: {{ stop.location.name }}
                 </a>
               </li>
