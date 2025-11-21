@@ -12,7 +12,10 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Get the database URL
-    db_url = os.environ.get("DATABASE_URL", f"sqlite:///{BASE_DIR/'dev.db'}")
+    db_url = os.environ.get("DATABASE_URL")
+    
+    if not db_url:
+        raise ValueError("DATABASE_URL environment variable not set. Cannot start application")
 
     # Fix for Render using 'postgres://' instead of 'postgresql://'
     if db_url.startswith("postgres://"):

@@ -1,6 +1,5 @@
 from flask import Flask, render_template, abort, request, url_for
 import folium
-import json
 import os
 from folium.features import DivIcon
 from config import Config
