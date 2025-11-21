@@ -6,3 +6,4 @@ Flask-Login
 folium==0.20.0
 gunicorn>=21.2
 python-dotenv
+psycopg2-binary

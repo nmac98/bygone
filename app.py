@@ -7,8 +7,9 @@ from config import Config
 from extensions import db, migrate
 from models import Location, RouteStop, Route
 from flask_migrate import Migrate
+from dotenv import load_dotenv
 
-migrate = Migrate()
+load_dotenv()
 
 app = Flask(__name__)
 app.config.from_object(Config)

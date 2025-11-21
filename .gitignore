@@ -13,3 +13,5 @@ Thumbs.db
 *.sqlite3
 dev.db
 *.log
+.env
+

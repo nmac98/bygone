@@ -33,34 +33,39 @@ def load_locations():
 
 
 def load_routes():
-    with open("data/routes.json") as f:
-        routes = json.load(f)
+    try:
+        with open("data/routes.json") as f:
+            routes = json.load(f)
 
-    for r in routes:
-        route = Route(
-            id=r["id"],
-            name=r["name"],
-            description=r["description"]
-        )
-        db.session.add(route)
-
-        for index, stop in enumerate(r["stops"]):
-            route_stop = RouteStop(
-                order=index,
-                dialogue=stop["dialogue"],
-                route=route,
-                location_id=stop["location_id"]
+        for r in routes:
+            route = Route(
+                id=r["id"],
+                name=r["name"],
+                description=r["description"]
             )
-            db.session.add(route_stop)
+            db.session.add(route)
 
-    db.session.commit()
+            for index, stop in enumerate(r["stops"]):
+                route_stop = RouteStop(
+                    order=index,
+                    dialogue=stop["dialogue"],
+                    route=route,
+                    location_id=stop["location_id"]
+                )
+                db.session.add(route_stop)
+
+        db.session.commit()
+        print("Routes loaded successfully." )
+    
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error loading routes: {e}")
+        raise e
+
 
 
 if __name__ == "__main__":
     with app.app_context():
-        # Ensure tables exist before importing
-        db.create_all()
-        
         load_locations()
         load_routes()
         print("Data imported successfully!")
