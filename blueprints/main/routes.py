@@ -2,10 +2,12 @@ from flask import render_template
 from . import main_bp
 from models import Location, Route
 import folium
+from utils.decorators import admin_required
 
-@main_bp.route('/test')
+@main_bp.route('/admin_test')
+@admin_required
 def test():
-    return "Flask is working!"
+    return "Welcome, admin user!"
 
 @main_bp.route('/test_themes')
 def test_themes():

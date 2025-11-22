@@ -1,4 +1,5 @@
 from extensions import db
+from flask_login import UserMixin
 
 class Location(db.Model):
     id = db.Column(db.String, primary_key=True)
