@@ -11,6 +11,7 @@ from blueprints.main import main_bp
 from blueprints.locations import locations_bp
 from blueprints.photos import photos_bp
 from blueprints.routes_app import routes_bp
+from blueprints.admin import admin_bp
 
 load_dotenv()
 
@@ -26,7 +27,8 @@ app.register_blueprint(main_bp)        # '/', '/test', '/test_themes'
 app.register_blueprint(locations_bp)   # '/gallery/...'
 app.register_blueprint(photos_bp)      # '/photo/...'
 app.register_blueprint(routes_bp)
-app.register_blueprint(auth)      # '/route/...'
+app.register_blueprint(auth)    # '/route/...'
+app.register_blueprint(admin_bp)    # '/admin/...'  
 
 if __name__ == "__main__":
     app.run(debug=True)
