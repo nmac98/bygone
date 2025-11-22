@@ -24,7 +24,7 @@ def view_route(route_name):
         })
 
     return render_template(
-        "route.html",
+        "pages/route.html",
         route=route,
         stops=stops,
         stops_data=stops_data  # <-- for Leaflet JS

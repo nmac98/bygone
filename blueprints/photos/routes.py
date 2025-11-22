@@ -23,7 +23,7 @@ def photo_detail(loc_id, photo_file):
     next_photo = photos[current_index + 1].file if current_index < len(photos) - 1 else None
 
     return render_template(
-        "photo_detail.html",
+        "pages/photo_detail.html",
         location=loc,
         photo=photos[current_index],
         prev_photo=prev_photo,

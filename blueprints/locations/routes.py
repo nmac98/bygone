@@ -41,7 +41,7 @@ def gallery(loc_id):
                     prev_location = stops[current_index - 1].location
 
     return render_template(
-        "gallery.html",
+        "pages/gallery.html",
         location=loc,
         map_data=map_data,
         next_location=next_location,

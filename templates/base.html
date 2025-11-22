@@ -3,33 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <title>{% block title %}BYGONE{% endblock %}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+
+    <!-- GLOBAL CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/map.css') }}">
+
+    <!-- LEAFLET CSS -->
     <link
         rel="stylesheet"
         href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
         crossorigin=""
     />
+
+    <!-- MOBILE SAFE META TAGS -->
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#131313">
+    <meta name="theme-color" content="#000000">
+
+    <!-- FAVICON -->
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+
+    <!-- LEAFLET JS -->
     <script
         src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
         crossorigin=""
     ></script>
+
+    <!-- GLOBAL JS (map helpers etc) -->
+    <script src="{{ url_for('static', filename='js/map.js') }}" defer></script>
 </head>
+
 <body>
-    <header>
+
+    <header class="main-header">
         <a href="{{ url_for('main.index') }}">
-            <img src="{{ url_for('static', filename='images/logo_large.png') }}" alt="BYGONE Logo" class="logo">
+            <img src="{{ url_for('static', filename='images/logo_large.png') }}" 
+                 alt="BYGONE Logo" 
+                 class="logo">
         </a>
-        <a href="{{ url_for('main.index') }}">Return to Map</a>
+
+        <a class="return-link" href="{{ url_for('main.index') }}">Return to Map</a>
     </header>
 
     <main>
         {% block content %}{% endblock %}
     </main>
+
 </body>
+
 </html>

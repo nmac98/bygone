@@ -32,7 +32,7 @@ def index():
         })
 
     return render_template(
-        "index.html",
+        "pages/index.html",
         locations=location_data,
         routes=routes,
     )
