@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>Manage Locations</h1>
+
+<table border="1" cellspacing="0" cellpadding="8">
+    <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Latitude</th>
+        <th>Longitude</th>
+        <th>Actions</th>
+    </tr>
+
+    {% for loc in locations %}
+    <tr>
+        <td>{{ loc.id }}</td>
+        <td>{{ loc.name }}</td>
+        <td>{{ loc.lat }}</td>
+        <td>{{ loc.lon }}</td>
+        <td><a href="{{ url_for('admin.edit_location', location_id=loc.id) }}">Edit</a></td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% endblock %}

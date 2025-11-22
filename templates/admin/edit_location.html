@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>Edit Location: {{ location.name }}</h1>
+
+<form method="POST">
+
+    <label>Name:</label><br>
+    <input type="text" name="name" value="{{ location.name }}"><br><br>
+
+    <label>Latitude:</label><br>
+    <input type="text" name="lat" value="{{ location.lat }}"><br><br>
+
+    <label>Longitude:</label><br>
+    <input type="text" name="lon" value="{{ location.lon }}"><br><br>
+
+    <label>Description:</label><br>
+    <textarea name="description" rows="4" cols="40">{{ location.description }}</textarea><br><br>
+
+    <label>Themes (comma separated):</label><br>
+    <input type="text" name="themes" value="{{ location.themes | join(', ') }}"><br><br>
+
+    <button type="submit">Save Changes</button>
+    <a href="{{ url_for('admin.admin_locations') }}">Cancel</a>
+
+</form>
+
+{% endblock %}
