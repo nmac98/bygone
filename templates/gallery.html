@@ -3,9 +3,13 @@
 {% block title %}{{ location.name }} | BYGONE{% endblock %}
 
 {% block content %}
+
 <div class="index-container">
+
+    <!-- LEFT: GALLERY -->
     <div class="gallery-column">
         <h2>{{ location.name }}</h2>
+
         <div class="gallery">
             {% for img in location.images %}
                 <a href="/photo/{{ location.id }}/{{ img.file }}">
@@ -21,15 +25,16 @@
         <h2>About {{ location.name }}</h2>
         <p>{{ location.description }}</p>
 
+        <!-- Leaflet map container -->
         <div class="map-box">
-            {{ map_html|safe }}
+            <div id="map" style="width:100%; height:300px;"></div>
         </div>
 
     </div>
 </div>
 
+<!-- ROUTE BANNER -->
 {% if route_id %}
-
 <div class="route-banner">
     {% if prev_location %}
         <a href="{{ url_for('locations.gallery', loc_id=prev_location.id) }}?route={{ route_id }}" class="route-btn left">
@@ -44,14 +49,27 @@
     </div>
 
     {% if next_location %}
-        <a href="{{ url_for('locations.gallery', loc_id=next_location.id) }}?route={{ route_id }}" class = "route-btn right">
+        <a href="{{ url_for('locations.gallery', loc_id=next_location.id) }}?route={{ route_id }}" class="route-btn right">
             {{ next_location.name }} →
         </a>
     {% else %}
         <span class="route-btn right disabled"></span>
     {% endif %}
 </div>
-
 {% endif %}
+
+<!-- LEAFLET MAP SCRIPT -->
+<script>
+const mapData = JSON.parse('{{ map_data | tojson | safe}}');
+
+const map = L.map("map").setView([mapData.lat, mapData.lon], 16);
+
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+}).addTo(map);
+
+L.marker([mapData.lat, mapData.lon]).addTo(map)
+    .bindPopup(`<b>${mapData.name}</b>`);
+</script>
 
 {% endblock %}

@@ -1,40 +1,98 @@
 {% extends "base.html" %}
 
-{% block title %}BYGONE | {{ route_name }}{% endblock %}
+{% block title %}BYGONE | {{ route.name }}{% endblock %}
 
 {% block content %}
-<h2>{{ route_name }}</h2>
+
+<h2>{{ route.name }}</h2>
 
 <div class="index-container">
-  <!-- Left: Map -->
-    <div id="map" class="theme-map-column">
+
+    <!-- LEFT: Leaflet Map -->
+    <div class="theme-map-column">
         <div class="map-wrapper">
-            {{ map_html | safe }}
+            <div id="map" style="width: 100%; height: 500px;"></div>
         </div>
     </div>
 
-  <!-- Right: Routes -->
+    <!-- RIGHT: Route Information -->
     <aside class="themes-column">
 
         <h2>{{ route.name }}</h2>
         <p>{{ route.description }}</p>
 
         <ul class="themes-list">
-          <li>
-            <a class="theme-btn">
-              Start with an introduction
-            </a>
-          </li>
+            <li><a class="theme-btn">Start with an introduction</a></li>
             {% for stop in stops %}
-              <li>
-                <a href="{{ url_for('locations.gallery', loc_id=stop.location.id) }}?route={{ route.id }}" class="theme-btn">
-                  Stop {{ loop.index }}: {{ stop.location.name }}
+            <li>
+                <a href="{{ url_for('locations.gallery', loc_id=stop.location.id) }}?route={{ route.id }}"
+                   class="theme-btn">
+                   Stop {{ loop.index }}: {{ stop.location.name }}
                 </a>
-              </li>
+            </li>
             {% endfor %}
         </ul>
 
     </aside>
+
 </div>
+
+<!-- LEAFLET SCRIPT -->
+<script>
+  const stopsData = {{ stops_data | tojson | safe }};
+
+  // Center map on first stop
+  const map = L.map("map").setView(
+    [stopsData[0].lat, stopsData[0].lon],
+    14
+  );
+
+  // Tiles
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  const markers = [];
+
+  // Numbered markers using Leaflet DivIcon
+  stopsData.forEach(stop => {
+    const iconHtml = `
+      <div style="
+        background-color: #007bff;
+        color: white;
+        border-radius: 50%;
+        text-align: center;
+        font-weight: bold;
+        line-height: 30px;
+        width: 30px;
+        height: 30px;
+        border: 2px solid white;
+        box-shadow: 0 0 3px rgba(0,0,0,0.3);
+      ">
+        ${stop.index}
+      </div>
+    `;
+
+    const icon = L.divIcon({
+      html: iconHtml,
+      className: "",
+      iconSize: [30, 30],
+      iconAnchor: [15, 15]
+    });
+
+    const marker = L.marker([stop.lat, stop.lon], { icon: icon })
+      .addTo(map)
+      .bindPopup(`<b>${stop.name}</b><br>${stop.dialogue || ""}`);
+
+    markers.push(marker);
+  });
+
+  // Fit map to all markers
+  if (markers.length > 1) {
+    const group = L.featureGroup(markers);
+    map.fitBounds(group.getBounds().pad(0.2));
+  }
+</script>
 
 {% endblock %}

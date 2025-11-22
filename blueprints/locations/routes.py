@@ -1,7 +1,6 @@
 from flask import render_template, abort, request
 from . import locations_bp
 from models import Location, Route
-import folium
 
 @locations_bp.route("/gallery/<loc_id>")
 def gallery(loc_id):
@@ -10,15 +9,11 @@ def gallery(loc_id):
     if not loc:
         abort(404)
 
-    # Create a mini folium map
-    m = folium.Map(location=[loc.lat, loc.lon], zoom_start=16)
-    folium.Marker(
-        [loc.lat, loc.lon],
-        popup=loc.name,
-        tooltip=loc.name
-    ).add_to(m)
-
-    map_html = m._repr_html_()  # generates the <iframe> HTML
+    map_data = {
+        "lat": loc.lat,
+        "lon": loc.lon,
+        "name": loc.name,
+    }
 
     route_id = request.args.get("route")
     next_location = prev_location = None
@@ -48,7 +43,7 @@ def gallery(loc_id):
     return render_template(
         "gallery.html",
         location=loc,
-        map_html=map_html,
+        map_data=map_data,
         next_location=next_location,
         prev_location=prev_location,
         dialogue=dialogue,

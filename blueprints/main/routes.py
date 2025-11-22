@@ -1,7 +1,6 @@
 from flask import render_template
 from . import main_bp
 from models import Location, Route
-import folium
 from utils.decorators import admin_required
 
 @main_bp.route('/admin_test')
@@ -14,30 +13,26 @@ def test_themes():
     routes = Route.query.all()
     return {"routes": [r.name for r in routes]}
 
-@main_bp.route('/')
+@main_bp.route("/")
 def index():
-    # Center map on Dublin
     locations = Location.query.all()
     routes = Route.query.all()
-    
-    m = folium.Map(location=[53.3498, -6.2603], zoom_start=14)
 
+    # Prepare data for Leaflet/JS
+    location_data = []
     for loc in locations:
-        name = loc.name
-        lat, lon = loc.lat, loc.lon
-        main_image = loc.images[0].file if loc.images else "placeholder.jpg"  # first image = cover
-        loc_id = loc.id
+        main_image = loc.images[0].file if loc.images else "placeholder.jpg"
+        location_data.append({
+            "id": loc.id,
+            "name": loc.name,
+            "lat": loc.lat,
+            "lon": loc.lon,
+            "description": loc.description,
+            "main_image": main_image,
+        })
 
-        popup_html = f"""
-        <b>{name}</b><br>
-        <img src="/static/images/{main_image}" width="200"><br>
-        <a href="/gallery/{loc_id}" target="_blank">See more photos</a>
-        """
-
-        folium.Marker(
-            location=[lat, lon],
-            popup=folium.Popup(popup_html, max_width=250),
-            tooltip=name
-        ).add_to(m)
-
-    return render_template("index.html", folium_map=m._repr_html_(), routes=routes)
+    return render_template(
+        "index.html",
+        locations=location_data,
+        routes=routes,
+    )

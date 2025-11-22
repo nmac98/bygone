@@ -7,8 +7,7 @@
   <!-- Left: Map -->
   <div id="map" class="map-column">
       <div class="map-wrapper">
-          {{ folium_map | safe }}
-          "Folium map section"
+          <div id="map"></div>
       </div>
   </div>
 
@@ -26,4 +25,82 @@
     </ul>
   </aside>
 </div>
+
+<style>
+  /* Adjust these to fit your layout – this is just a starting point */
+  #map {
+    width: 100%;
+    min-height: 400px; /* adjust as needed or use vh */
+  }
+
+  .map-wrapper {
+    height: 100%;
+  }
+
+  .index-container {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .map-column {
+    flex: 1 1 60%;
+  }
+
+  .themes-column {
+    flex: 1 1 40%;
+    padding: 1rem;
+  }
+
+  @media (max-width: 768px) {
+    .map-column,
+    .themes-column {
+      flex: 1 1 100%;
+    }
+  }
+</style>
+
+<script>
+  // Locations from Flask, converted safely to JS
+  const locations = JSON.parse('{{ locations | tojson }}');
+
+  // Default centre: Dublin
+  const defaultLat = 53.3498;
+  const defaultLon = -6.2603;
+
+  // Initialise map
+  const map = L.map("map").setView([defaultLat, defaultLon], 14);
+
+  // Base map tiles
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  // Add markers
+  const markers = [];
+
+  locations.forEach(loc => {
+    if (loc.lat == null || loc.lon == null) {
+      return; // skip if coords missing
+    }
+
+    const marker = L.marker([loc.lat, loc.lon]).addTo(map);
+
+    const popupHtml = `
+      <b>${loc.name}</b><br>
+      <img src="/static/images/${loc.main_image}" width="200"><br>
+      <a href="/gallery/${loc.id}" target="_blank">See more photos</a>
+    `;
+
+    marker.bindPopup(popupHtml);
+    markers.push(marker);
+  });
+
+  // Auto-fit map to markers if you like (optional)
+  if (markers.length > 0) {
+    const group = L.featureGroup(markers);
+    map.fitBounds(group.getBounds().pad(0.2));
+  }
+</script>
+
 {% endblock %}
