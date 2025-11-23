@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}{{ route.name }} | BYGONE{% endblock %}
+
+{% block content %}
+
+<div class="route-page">
+
+    <!-- (1) ROUTE NAME -->
+    <h1 class="route-title">{{ route.name }}</h1>
+
+    <!-- (2) DESCRIPTION -->
+    <p class="route-description">
+        {{ route.description }}
+    </p>
+
+    <!--START BUTTON-->
+
+    <a 
+        class="start-tour-btn" 
+        href="{{ url_for('locations.gallery', loc_id=stops[0].location.id) }}?route={{ route.id }}"
+    >
+        Start Tour →
+    </a>
+
+
+    <!-- (3) MINI-MAP -->
+    <section class="route-map-section">
+        <div id="route-map"></div>
+    </section>
+
+    <!-- (4) STOPS ACCORDION -->
+    <section class="route-stops">
+        <h2>Stops</h2>
+
+        <div class="accordion">
+
+            {% for stop in stops %}
+                <div class="accordion-item">
+                  <div class="accordion-header">
+                      <button class="accordion-title">
+                          Stop {{ loop.index }} — {{ stop.location.name }}
+                      </button>
+
+                      <a 
+                          class="accordion-go-btn"
+                          href="{{ url_for('locations.gallery', loc_id=stop.location.id) }}?route={{ route.id }}"
+                          title="Go to stop"
+                      >
+                          →
+                      </a>
+                  </div>
+                    <div class="accordion-body">
+                        <p>{{ stop.dialogue }}</p>
+                    </div>
+                </div>
+            {% endfor %}
+
+        </div>
+    </section>
+
+</div>
+
+<!-- LEAFLET JS -->
+<script>
+    const stops = [
+        {% for stop in stops %}
+            {
+                name: "{{ stop.location.name }}",
+                lat: {{ stop.location.lat }},
+                lon: {{ stop.location.lon }},
+                num: {{ loop.index }}
+            }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    const map = L.map("route-map");
+
+    // Base Layer
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19
+    }).addTo(map);
+
+    // Numbered markers
+    const markerList = stops.map(stop => {
+        return L.marker([stop.lat, stop.lon], {
+            icon: L.divIcon({
+                className: "numbered-icon",
+                html: `<div class="marker-circle">${stop.num}</div>`,
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            })
+        }).bindPopup(`<b>${stop.name}</b>`);
+    });
+
+    markerList.forEach(m => m.addTo(map));
+
+    // Fit map to all markers
+    const group = L.featureGroup(markerList);
+    map.fitBounds(group.getBounds().pad(0.3));
+</script>
+
+{% endblock %}

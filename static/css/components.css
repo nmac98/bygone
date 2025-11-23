@@ -1,0 +1,28 @@
+/* ===========================
+   TOP BANNER — Logo Only
+   =========================== */
+.top-banner {
+    background: #000;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+
+    padding: calc(env(safe-area-inset-top) + 6px) 0 6px 0; /* thinner banner */
+}
+
+.top-logo {
+    height: 32px; /* smaller, cleaner */
+    width: auto;
+    object-fit: contain;
+
+    /* Crisp on retina */
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+}
+
+@media (min-width: 768px) {
+    .top-logo {
+        height: 38px; /* slightly bigger on desktop */
+    }
+}

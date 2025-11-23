@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}{{ location.name }} | BYGONE{% endblock %}
+
+{% block content %}
+<!--script for image carousel-->
+    <script>
+        // Make the image data available globally
+        images = [
+            {% for img in location.images %}
+                {
+                    file: "/static/images/{{ img.file }}",
+                    title: "{{ img.title }}"
+                }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        ];
+
+        // Always start at index 0 when loading page
+        currentIndex = 0;
+    </script>
+
+<div class="location-page">
+
+    <!-- (1) LOCATION NAME -->
+    <h1 class="location-title">{{ location.name }}</h1>
+
+    <!-- IMAGE CAROUSEL -->
+    <section class="image-carousel">
+
+        <img 
+            id="carousel-image"
+            class="carousel-main-img"
+            onclick="openLightbox()"
+        >
+
+        <!-- NAV BUTTONS OVER IMAGE -->
+        <button class="carousel-btn prev" onclick="prevImage()">←</button>
+        <button class="carousel-btn next" onclick="nextImage()">→</button>
+    </section>
+
+
+    <!-- (3) OVERVIEW SECTION -->
+    <section class="location-overview">
+        <h2>Overview</h2>
+        <p>{{ location.description }}</p>
+    </section>
+
+    <!-- (4) EXPANDABLE HISTORY SECTION -->
+    <section class="location-history">
+        <h2>History</h2>
+
+        <div class="accordion">
+
+            <!-- CHAPTER TEMPLATE (you will replace placeholders later) -->
+            <div class="accordion-item">
+                <button class="accordion-header">17th Century</button>
+                <div class="accordion-body">
+                    <p>Placeholder text for 17th century history.</p>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <button class="accordion-header">18th Century</button>
+                <div class="accordion-body">
+                    <p>Placeholder text for 18th century history.</p>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <button class="accordion-header">19th Century</button>
+                <div class="accordion-body">
+                    <p>Placeholder text for 19th century history.</p>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <button class="accordion-header">20th Century</button>
+                <div class="accordion-body">
+                    <p>Placeholder text for 20th century history.</p>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <button class="accordion-header">1916 Rising</button>
+                <div class="accordion-body">
+                    <p>Placeholder text for 1916 rising chapter.</p>
+                </div>
+            </div>
+        </div>
+
+    </section>
+
+</div>
+
+{% if route_id %}
+
+<div class="route-nav-banner">
+
+    <div class="nav-section left">
+        {% if prev_location %}
+            <a 
+                href="{{ url_for('locations.gallery', loc_id=prev_location.id) }}?route={{ route_id }}"
+                class="nav-btn"
+            >← Previous </a>
+        {% else %}
+            <span class="nav-btn disabled"></span>
+        {% endif %}
+    </div>
+
+    <div class="nav-section center">
+        <span class="nav-progress">{{ progress }}</span>
+    </div>
+
+    <div class="nav-section right">
+        {% if next_location %}
+            <a 
+                href="{{ url_for('locations.gallery', loc_id=next_location.id) }}?route={{ route_id }}"
+                class="nav-btn"
+            >Next →</a>
+        {% else %}
+            <span class="nav-btn disabled"></span>
+        {% endif %}
+    </div>
+
+</div>
+
+<div id="lightbox" class="lightbox" onclick="closeLightbox(event)">
+    <img id="lightbox-img" class="lightbox-img" />
+    <button class="lightbox-close" onclick="closeLightbox(event)">✕</button>
+</div>
+
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,463 @@
+/* RESET */
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+    background: #000;
+    color: #fff;
+}
+
+h1, h2 {
+    margin: 0;
+}
+
+main {
+    padding-top: 0.5rem;      /* breathing room under the banner */
+}
+
+html, body {
+    overflow-x: hidden;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+
+/* ===========================
+   Index Page Styles
+   =========================== */
+
+/* LAYOUT */
+.landing-container {
+    display: flex;
+    flex-direction: column;
+}
+
+/* ROUTE BUTTONS */
+.routes-list {
+    padding: 20px;
+    background: #000;
+    border-radius: 14px 14px;
+    list-style: none;
+    margin: 0;
+}
+
+.routes-list li {
+    width: 100%;
+}
+
+.routes-list h2 {
+    margin-bottom: 10px;
+}
+
+.routes-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.routes-btn {
+    display: block;
+    width: 100%;
+    padding: 16px;
+    margin: 8px 0;
+
+    background: #181818;
+    border: 1px solid #333;
+    color: #fff;
+
+    text-decoration: none;
+    border-radius: 6px;
+    text-align: center;
+    font-size: 1.1rem;
+    transition: background 0.2s ease, transform 0.1s ease;
+
+    box-sizing: border-box;
+}
+
+.routes-btn:hover {
+    opacity: 0.8;
+}
+
+/* DESKTOP: two-column buttons */
+@media (min-width: 992px) {
+    .routes-buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+    }
+}
+
+/* ===========================
+   RESTORED MAIN HEADER
+   =========================== */
+
+.main-header {
+    background-color: #131313;
+    color: white;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.main-header a {
+    color: rgb(248, 246, 246);
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.main-header a:hover {
+    text-decoration: underline;
+}
+
+.main-header .logo {
+    height: 30px;
+    width: auto;
+    object-fit: contain;
+}
+
+.index-container {
+    display: flex;
+    flex-direction: column; /* ← vertical layout */
+    gap: 20px;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;     /* prevent horizontal scroll */
+    box-sizing: border-box;
+    padding: 0 12px;        /* optional margin from edges */
+}
+
+.routes-column {
+    flex: 1 1 40%;
+    padding: 1rem;
+}
+
+/* ===========================
+   LOCATION PAGE LAYOUT
+   =========================== */
+.location-page {
+    padding: 16px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.location-title {
+    color: #fff;
+    font-size: 1.8rem;
+    margin-bottom: 16px;
+}
+
+/* ===========================
+   IMAGE CAROUSEL
+   =========================== */
+
+.image-carousel {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.carousel-main-img {
+    width: 100%;
+    height: 55vh;                 /* FIXED HEIGHT — prevents page jumping */
+    object-fit: contain;
+    background: #000;
+    border-radius: 10px;
+}
+
+.carousel-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0,0,0,0.6);
+    border: 1px solid #444;
+    color: #fff;
+    padding: 10px 14px;
+    font-size: 1.5rem;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 0 10px rgba(0,0,0,0.4);
+    transition: background 0.2s, transform 0.1s;
+}
+
+.carousel-btn.prev { left: 12px; }
+.carousel-btn.next { right: 12px; }
+
+.carousel-btn:active {
+    transform: translateY(-50%) scale(0.9);
+}
+
+.carousel-btn:hover {
+    background: #222;
+}
+
+/* Mobile layout improvements */
+@media (max-width: 600px) {
+    .carousel-btn {
+        padding: 8px 10px;
+    }
+
+    .carousel-main-img {
+        max-width: 88%;
+        max-height: 50vh;
+    }
+}
+
+/* FULLSCREEN LIGHTBOX */
+.lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.95);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 3000;
+}
+
+.lightbox-img {
+    max-width: 90%;
+    max-height: 90%;
+    object-fit: contain;
+    border-radius: 12px;
+}
+
+.lightbox-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+    font-size: 1.8rem;
+    border: none;
+    border-radius: 50%;
+    width: 38px;
+    height: 38px;
+    cursor: pointer;
+    backdrop-filter: blur(5px);
+}
+
+
+/* ===========================
+   OVERVIEW TEXT
+   =========================== */
+.location-overview {
+    margin-bottom: 24px;
+}
+
+.location-overview h2 {
+    color: #fff;
+    margin-bottom: 8px;
+}
+
+.location-overview p {
+    line-height: 1.6;
+    color: #ddd;
+}
+
+/* ===========================
+   ACCORDION (Expandable Sections)
+   =========================== */
+.accordion-item {
+    margin-bottom: 10px;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #111;
+}
+
+.accordion-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #222;
+    padding: 12px 14px;
+    cursor: pointer;
+}
+
+.accordion-body {
+    display: none;
+    padding: 14px;
+    background: #181818;
+    color: #ccc;
+    line-height: 1.5;
+}
+
+.accordion-title {
+    flex: 1;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.accordion-go-btn {
+    background: #007bff;
+    color: #fff;
+    text-decoration: none;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 1.1rem;
+    margin-left: 12px;
+    transition: background 0.2s ease;
+}
+
+.accordion-go-btn:hover {
+    background: #005ec4;
+}
+
+.accordion-item.open .accordion-body {
+    display: block;
+}
+
+/* Route Navigation on gallery.html / locations pages */
+
+/* ===========================
+   ROUTE NAVIGATION BANNER
+   =========================== */
+
+.route-nav-banner {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: rgba(20,20,20,0.95);
+    display: flex;
+    justify-content: space-between; /* Each section controls its own alignment */
+    align-items: center;
+    padding: 12px 14px;
+    border-top: 1px solid #333;
+    z-index: 2000;
+    font-size: 1rem;
+}
+
+/* THREE EQUAL SECTIONS */
+.nav-section {
+    flex: 1;                  /* Equal width columns */
+    display: flex;
+    align-items: center;
+}
+
+/* ALIGN LEFT / CENTER / RIGHT */
+.nav-section.left  { justify-content: flex-start; }
+.nav-section.center { justify-content: center; }
+.nav-section.right { justify-content: flex-end; }
+
+/* BUTTONS */
+.nav-btn {
+    color: #fff;
+    text-decoration: none;
+    padding: 8px 12px;
+    background: #111;
+    border: 1px solid #444;
+    border-radius: 6px;
+    font-weight: 500;
+    white-space: nowrap;      /* Prevent text wrapping */
+    max-width: 95%;           /* Avoid overflow on long names */
+    overflow: hidden;
+    text-overflow: ellipsis;  /* (...) if name is too long */
+}
+
+.nav-btn:hover {
+    background: #222;
+}
+
+.nav-btn.disabled {
+    opacity: 0.25;
+    pointer-events: none;
+    background: transparent;
+    border: none;
+}
+
+/* PROGRESS TEXT */
+.nav-progress {
+    color: #fff;
+    font-weight: 600;
+}
+
+
+/* ===========================
+   ROUTE PAGE
+   =========================== */
+
+.route-page {
+    padding: 16px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.route-title {
+    font-size: 1.8rem;
+    color: #fff;
+    margin-bottom: 8px;
+}
+
+.route-description {
+    color: #ccc;
+    line-height: 1.6;
+    margin-bottom: 20px;
+}
+
+/* Mini-map container */
+.route-map-section {
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+#route-map {
+    width: 100%;
+    height: 250px;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* Numbered marker style */
+.marker-circle {
+    background: #007bff;
+    color: #fff;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    border: 2px solid #fff;
+    box-shadow: 0 0 6px rgba(0,0,0,0.3);
+}
+
+/* Stops section */
+.route-stops h2 {
+    color: #fff;
+    margin-bottom: 10px;
+}
+
+/* start tour button */
+
+.start-tour-btn {
+    display: inline-block;
+    margin: 12px 0 20px 0;
+    padding: 14px 20px;
+    background: #007bff;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    transition: background 0.2s ease;
+}
+
+.start-tour-btn:hover {
+    background: #005ec4;
+}
