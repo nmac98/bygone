@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Admin | Delete Stop{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+  <h1>Delete Stop #{{ stop.id }}</h1>
+
+  <p>Are you sure you want to delete this stop?</p>
+
+  <p>
+    <strong>Route:</strong> {{ stop.route.name }}<br>
+    <strong>Location:</strong> {{ stop.location.name }}<br>
+    <strong>Order:</strong> {{ stop.order }}
+  </p>
+
+  <form method="POST">
+    <button type="submit" class="btn btn-danger">Delete Stop</button>
+    <a href="{{ url_for('admin.manage_stops', route_id=stop.route_id) }}" class="btn btn-secondary">Cancel</a>
+  </form>
+</div>
+{% endblock %}

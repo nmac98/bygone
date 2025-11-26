@@ -127,6 +127,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
+// test
+
+console.log("Photos:", photos);
+
+
 // ---------------------------------------------------------
 // END OF main.js
 // ---------------------------------------------------------

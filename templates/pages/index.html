@@ -29,6 +29,7 @@
 <script>
   // Locations from Flask, converted safely to JS
   const locations = JSON.parse('{{ locations | tojson }}');
+  const photos = JSON.parse('{{ photos | tojson }}');
 
   // Default centre: Dublin
   const defaultLat = 53.3498;
@@ -62,6 +63,31 @@
     marker.bindPopup(popupHtml);
     markers.push(marker);
   });
+
+  // Add photo markers (small black markers)
+  photos.forEach(photo => {
+    if (photo.lat == null || photo.lon == null) {
+      return; // skip photos without coordinates
+    }
+
+    const icon = L.icon({
+      iconUrl: "/static/icons/photo-marker-black.png",  // you will add this file
+      iconSize: [14, 14],
+      iconAnchor: [7, 7]
+    });
+
+    const marker = L.marker([photo.lat, photo.lon], { icon }).addTo(map);
+
+    const popupHtml = `
+        <b>${photo.title}</b><br>
+        <img src="/static/images/${photo.file}" width="180"><br>
+        <small>Photo</small>
+    `;
+
+    marker.bindPopup(popupHtml);
+    markers.push(marker);
+  });
+
 
   // Auto-fit map to markers if you like (optional)
   if (markers.length > 0) {

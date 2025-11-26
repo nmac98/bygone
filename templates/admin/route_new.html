@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Admin | New Route{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+  <h1>Create New Route</h1>
+
+  <form method="POST">
+    <div class="form-group">
+      <label for="id">Route ID (string)</label>
+      <input type="text" name="id" id="id" required class="form-control"
+             placeholder="e.g. parkgate_route">
+    </div>
+
+    <div class="form-group">
+      <label for="name">Route Name</label>
+      <input type="text" name="name" id="name" required class="form-control">
+    </div>
+
+    <div class="form-group">
+      <label for="description">Description</label>
+      <textarea name="description" id="description" rows="4" class="form-control"></textarea>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Create Route</button>
+    <a href="{{ url_for('admin.admin_routes') }}" class="btn btn-secondary">Cancel</a>
+  </form>
+</div>
+{% endblock %}

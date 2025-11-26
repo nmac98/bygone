@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Admin | Edit Stop{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+  <h1>Edit Stop #{{ stop.id }} (Route: {{ stop.route.name }})</h1>
+
+  <form method="POST">
+
+    <div class="form-group">
+      <label for="location_id">Location</label>
+      <select name="location_id" id="location_id" class="form-control">
+        {% for loc in locations %}
+          <option value="{{ loc.id }}"
+                  {% if loc.id == stop.location_id %}selected{% endif %}>
+            {{ loc.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="dialogue">Dialogue / Narrative</label>
+      <textarea name="dialogue" id="dialogue" rows="5" class="form-control">{{ stop.dialogue }}</textarea>
+    </div>
+
+    <div class="form-group">
+      <label for="order">Order</label>
+      <input type="number" name="order" id="order"
+             class="form-control" min="1" value="{{ stop.order }}">
+    </div>
+
+    <button type="submit" class="btn btn-primary">Save Changes</button>
+    <a href="{{ url_for('admin.manage_stops', route_id=stop.route_id) }}" class="btn btn-secondary">Cancel</a>
+  </form>
+</div>
+{% endblock %}

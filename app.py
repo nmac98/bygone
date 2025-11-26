@@ -13,10 +13,14 @@ from blueprints.photos import photos_bp
 from blueprints.routes_app import routes_bp
 from blueprints.admin import admin_bp
 
+import os
+
 load_dotenv()
 
 app = Flask(__name__)
 app.config.from_object(Config)
+
+app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10 MB max upload
 
 db.init_app(app)
 migrate.init_app(app, db)

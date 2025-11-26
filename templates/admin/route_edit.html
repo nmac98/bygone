@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Admin | Edit Route{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+  <h1>Edit Route: {{ route.name }}</h1>
+
+  <form method="POST">
+    <div class="form-group">
+      <label>ID</label>
+      <input type="text" class="form-control" value="{{ route.id }}" disabled>
+      <small class="text-muted">ID cannot be changed.</small>
+    </div>
+
+    <div class="form-group">
+      <label for="name">Route Name</label>
+      <input type="text" name="name" id="name" value="{{ route.name }}" required class="form-control">
+    </div>
+
+    <div class="form-group">
+      <label for="description">Description</label>
+      <textarea name="description" id="description" rows="4" class="form-control">{{ route.description }}</textarea>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Save Changes</button>
+    <a href="{{ url_for('admin.admin_routes') }}" class="btn btn-secondary">Cancel</a>
+  </form>
+</div>
+{% endblock %}

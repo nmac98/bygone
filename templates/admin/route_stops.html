@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Admin | Route Stops{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+  <h1>Stops for Route: {{ route.name }}</h1>
+
+  <p>
+    <a href="{{ url_for('admin.new_stop', route_id=route.id) }}" class="btn btn-primary">
+      Add New Stop
+    </a>
+  </p>
+
+  {% if stops %}
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Order</th>
+          <th>Location</th>
+          <th>Dialogue</th>
+          <th>Move</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for stop in stops %}
+          <tr>
+            <td>{{ stop.order }}</td>
+            <td>{{ stop.location.name }}</td>
+            <td>{{ stop.dialogue[:80] ~ ('...' if stop.dialogue|length > 80 else '') }}</td>
+
+            <td>
+              <a href="{{ url_for('admin.move_stop', stop_id=stop.id, direction='up') }}">⬆️</a>
+              <a href="{{ url_for('admin.move_stop', stop_id=stop.id, direction='down') }}">⬇️</a>
+            </td>
+
+            <td>
+              <a href="{{ url_for('admin.edit_stop', stop_id=stop.id) }}">Edit</a> |
+              <a href="{{ url_for('admin.delete_stop', stop_id=stop.id) }}">Delete</a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No stops yet.</p>
+  {% endif %}
+
+  <p>
+    <a href="{{ url_for('admin.admin_routes') }}" class="btn btn-secondary">Back to Routes</a>
+  </p>
+</div>
+{% endblock %}

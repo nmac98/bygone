@@ -17,7 +17,10 @@ class Image(db.Model):
     title = db.Column(db.String(200))
     date = db.Column(db.String(20))
     description = db.Column(db.Text)
-
+    lat = db.Column(db.Float, nullable=True)
+    lon = db.Column(db.Float, nullable=True)
+    show_on_map = db.Column(db.Boolean, default=False)
+    
     location_id = db.Column(db.String, db.ForeignKey('location.id'))
 
 class Route(db.Model):

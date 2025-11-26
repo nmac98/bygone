@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Admin | Routes{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+  <h1>Routes</h1>
+
+  <p>
+    <a href="{{ url_for('admin.new_route') }}" class="btn btn-primary">Create New Route</a>
+  </p>
+
+  {% if routes %}
+    <table class="table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Description</th>
+          <th>Stops</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for route in routes %}
+          <tr>
+            <td>{{ route.id }}</td>
+            <td>{{ route.name }}</td>
+            <td>{{ route.description[:60] ~ ('...' if route.description|length > 60 else '') }}</td>
+            <td>{{ route.stops|length }}</td>
+            <td>
+              <a href="{{ url_for('admin.manage_stops', route_id=route.id) }}">Stops</a> |
+              <a href="{{ url_for('admin.edit_route', route_id=route.id) }}">Edit</a> |
+              <a href="{{ url_for('admin.delete_route', route_id=route.id) }}">Delete</a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No routes found.</p>
+  {% endif %}
+</div>
+{% endblock %}

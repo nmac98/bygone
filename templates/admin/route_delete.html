@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Admin | Delete Route{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+  <h1>Delete Route: {{ route.name }}</h1>
+
+  <p>This will permanently delete the route and all of its stops.</p>
+
+  <form method="POST">
+    <button type="submit" class="btn btn-danger">Delete Route</button>
+    <a href="{{ url_for('admin.admin_routes') }}" class="btn btn-secondary">Cancel</a>
+  </form>
+</div>
+{% endblock %}

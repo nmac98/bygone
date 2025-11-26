@@ -1,22 +1,24 @@
 from flask import render_template
 from . import main_bp
-from models import Location, Route
+from models import Location, Route, Image
 from utils.decorators import admin_required
-
-@main_bp.route('/admin_test')
-@admin_required
-def test():
-    return "Welcome, admin user!"
-
-@main_bp.route('/test_themes')
-def test_themes():
-    routes = Route.query.all()
-    return {"routes": [r.name for r in routes]}
 
 @main_bp.route("/")
 def index():
     locations = Location.query.all()
     routes = Route.query.all()
+
+    photos = [
+        {
+            "id": p.id,
+            "file": p.file,
+            "title": p.title,
+            "lat": p.lat,
+            "lon": p.lon
+        }
+        for p in Image.query.filter(Image.lat.isnot(None), Image.lon.isnot(None)).all()
+    ]
+
 
     # Prepare data for Leaflet/JS
     location_data = []
@@ -34,5 +36,6 @@ def index():
     return render_template(
         "pages/index.html",
         locations=location_data,
+        photos=photos,
         routes=routes,
     )
