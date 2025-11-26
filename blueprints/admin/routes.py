@@ -99,6 +99,53 @@ def edit_location(location_id):
 
     return render_template('admin/edit_location.html', location=location, themes_text=themes_text)
 
+# delete location requires detaching any related photos and tour/route stops
+
+@admin_bp.route('/location/<location_id>/delete', methods=['GET', 'POST'])
+@admin_required
+def delete_location(location_id):
+    location = Location.query.get_or_404(location_id)
+
+    # How many photos use this location?
+    photos = Image.query.filter_by(location_id=location_id).all()
+    photo_count = len(photos)
+
+    # How many route stops use this location?
+    stops = RouteStop.query.filter_by(location_id=location_id).all()
+    stop_count = len(stops)
+
+    # POST: perform delete only when allowed
+    if request.method == 'POST':
+
+        # BLOCK DELETION if location is still used in route stops
+        if stop_count > 0:
+            flash(
+                "You can only remove a location when it is removed from all tour routes.",
+                "error"
+            )
+            return redirect(url_for('admin.delete_location', location_id=location_id))
+
+        # Detach all photos first
+        for img in photos:
+            img.location_id = None
+
+        # Now delete the location
+        db.session.delete(location)
+        db.session.commit()
+
+        flash("Location deleted and photos detached.", "success")
+        return redirect(url_for('admin.admin_locations'))
+
+    return render_template(
+        'admin/location_delete.html',
+        location=location,
+        photos=photos,
+        stops=stops,
+        photo_count=photo_count,
+        stop_count=stop_count
+    )
+
+
 @admin_bp.route('/photos')
 @admin_required
 def admin_photos():

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Admin | Delete Location{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+  <h1>Delete Location: {{ location.name }}</h1>
+
+  <h3>Attached Photos</h3>
+  {% if photo_count > 0 %}
+    <ul>
+      {% for img in photos %}
+        <li>
+          <img src="{{ url_for('static', filename='images/' ~ img.file) }}"
+               style="height: 60px; object-fit: cover; margin-right: 10px;">
+          {{ img.title or img.file }}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No photos attached.</p>
+  {% endif %}
+
+  <h3>Route Stops Using This Location</h3>
+  {% if stop_count > 0 %}
+    <div class="alert alert-danger">
+      <p><strong>This location appears in {{ stop_count }} tour stops.</strong></p>
+      <p>You can only remove a location when it is removed from all tour routes.</p>
+    </div>
+
+    <ul>
+      {% for stop in stops %}
+        <li>
+          Route: <strong>{{ stop.route.name }}</strong> — Stop #{{ stop.order }}
+        </li>
+      {% endfor %}
+    </ul>
+
+    <a href="{{ url_for('admin.admin_locations') }}" class="btn btn-secondary">Back</a>
+
+  {% else %}
+    <div class="alert alert-warning">
+      <p>This action will:</p>
+      <ul>
+        <li>Detach {{ photo_count }} photos from this location (photos remain intact)</li>
+        <li>Delete the location permanently</li>
+      </ul>
+    </div>
+
+    <form method="POST">
+      <button type="submit" class="btn btn-danger">
+        Detach Photos & Delete Location
+      </button>
+      <a href="{{ url_for('admin.admin_locations') }}" class="btn btn-secondary">Cancel</a>
+    </form>
+  {% endif %}
+
+</div>
+{% endblock %}
