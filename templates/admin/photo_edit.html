@@ -64,8 +64,80 @@
       </label>
     </div>
 
+    <h3>Photo GPS Location</h3>
+    <p>Click on the map to set the latitude and longitude.</p>
+
+    <div id="photo-map" style="height: 300px; margin-bottom: 1rem;"></div>
+
+    <button type="button" id="update-map" class="btn btn-secondary" style="margin-bottom: 1rem;">
+      Update Map from Lat/Lon
+    </button>
+
     <button type="submit" class="btn btn-primary">Save changes</button>
     <a href="{{ url_for('admin.admin_photos') }}" class="btn btn-secondary">Cancel</a>
   </form>
 </div>
+
+<link rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""></script>
+
+<script>
+  const defaultLat = 53.3498;
+  const defaultLon = -6.2603;
+
+  {% if image %}
+      const existingLat = {{ image.lat if image.lat is not none else 'null' }};
+      const existingLon = {{ image.lon if image.lon is not none else 'null' }};
+  {% else %}
+      const existingLat = null;
+      const existingLon = null;
+  {% endif %}
+
+  const startLat = existingLat !== null ? existingLat : defaultLat;
+  const startLon = existingLon !== null ? existingLon : defaultLon;
+
+  const map = L.map('photo-map').setView([startLat, startLon], 13);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  let marker = null;
+
+  function setMarkerAndInputs(lat, lon) {
+    if (marker) {
+      marker.setLatLng([lat, lon]);
+    } else {
+      marker = L.marker([lat, lon]).addTo(map);
+    }
+    document.getElementById('lat').value = lat.toFixed(6);
+    document.getElementById('lon').value = lon.toFixed(6);
+  }
+
+  if (existingLat !== null && existingLon !== null) {
+    setMarkerAndInputs(existingLat, existingLon);
+  }
+
+  map.on('click', function(e) {
+    const lat = e.latlng.lat;
+    const lon = e.latlng.lng;
+    setMarkerAndInputs(lat, lon);
+  });
+
+  document.getElementById('update-map').addEventListener('click', function() {
+    const latVal = parseFloat(document.getElementById('lat').value);
+    const lonVal = parseFloat(document.getElementById('lon').value);
+    if (!isNaN(latVal) && !isNaN(lonVal)) {
+      setMarkerAndInputs(latVal, lonVal);
+      map.setView([latVal, lonVal], 15);
+    }
+  });
+</script>
+
 {% endblock %}

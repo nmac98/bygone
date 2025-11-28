@@ -39,10 +39,28 @@
     </section>
 
 
-    <!-- (3) OVERVIEW SECTION -->
+    <!-- (3) OVERVIEW SECTION / if on a tour, gives route_stop dialogue -->
     <section class="location-overview">
-        <h2>Overview</h2>
-        <p>{{ location.description }}</p>
+        {% if route_id %}
+            <h2>Tour Guide</h2>
+
+            {# Dialogue may be a list or a single string #}
+            {% if dialogue %}
+                {% if dialogue is iterable and dialogue is not string %}
+                    {% for line in dialogue %}
+                        <p>{{ line }}</p>
+                    {% endfor %}
+                {% else %}
+                    <p>{{ dialogue }}</p>
+                {% endif %}
+            {% else %}
+                <p>No dialogue available for this stop.</p>
+            {% endif %}
+
+        {% else %}
+            <h2>Overview</h2>
+            <p>{{ location.description }}</p>
+        {% endif %}
     </section>
 
     <!-- (4) EXPANDABLE HISTORY SECTION -->
@@ -124,11 +142,11 @@
 
 </div>
 
+{% endif %}
+
 <div id="lightbox" class="lightbox" onclick="closeLightbox(event)">
     <img id="lightbox-img" class="lightbox-img" />
     <button class="lightbox-close" onclick="closeLightbox(event)">✕</button>
 </div>
-
-{% endif %}
 
 {% endblock %}
