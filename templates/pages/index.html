@@ -28,9 +28,8 @@
 
 <script>
   // Locations from Flask, converted safely to JS
-  const locations = JSON.parse('{{ locations | tojson }}');
-  const photos = JSON.parse('{{ photos | tojson }}');
-
+  const locations = {{ locations | tojson | safe }};
+  const photos = {{ photos | tojson | safe }};
   // Default centre: Dublin
   const defaultLat = 53.3498;
   const defaultLon = -6.2603;
