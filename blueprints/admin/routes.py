@@ -1,7 +1,7 @@
 from flask import render_template, request, url_for, redirect, current_app, flash
 from utils.decorators import admin_required
 from . import admin_bp
-from models import Location, Image, Route, RouteStop, ImageAsset, ImageFile
+from models import Location, Image, Route, RouteStop, ImageAsset, ImageFile, LocationImage
 from extensions import db
 from utils.ids import new_ulid
 from utils.supabase_storage import upload_file_bytes, public_url, SUPABASE_BUCKET
@@ -520,3 +520,27 @@ def images_upload():
         return redirect(url_for("admin.images_list"))
 
     return render_template("admin/images_upload.html")
+
+@admin_bp.route("/images/<image_id>/attach", methods=["GET", "POST"])
+@admin_required
+def image_attach(image_id):
+    img = ImageAsset.query.get_or_404(image_id)
+    locations = Location.query.order_by(Location.name.asc()).all()
+
+    if request.method == "POST":
+        location_id = request.form.get("location_id")
+        if not location_id:
+            flash("Choose a location.", "error")
+            return redirect(request.url)
+
+        # find next sort order
+        existing = LocationImage.query.filter_by(location_id=location_id).count()
+        link = LocationImage(location_id=location_id, image_id=image_id, sort_order=existing)
+        db.session.add(link)
+        db.session.commit()
+
+        flash("Attached image to location.", "success")
+        return redirect(url_for("admin.images_list"))
+
+    return render_template("admin/image_attach.html", img=img, locations=locations)
+

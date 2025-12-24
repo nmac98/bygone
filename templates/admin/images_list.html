@@ -13,6 +13,7 @@
         <div style="font-size: 0.9rem; opacity: 0.8;">{{ img.id }}</div>
         {% if original %}
           <img src="{{ original.public_url }}" style="max-width:240px; height:auto; margin-top: 0.5rem;">
+          <p><a href="{{ url_for('admin.image_attach', image_id=img.id) }}">Attach to location</a></p>
         {% endif %}
       </li>
     {% endfor %}
