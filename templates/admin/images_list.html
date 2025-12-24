@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Image Library{% endblock %}
+{% block content %}
+<div class="admin-container">
+  <h1>Image Library</h1>
+  <p><a href="{{ url_for('admin_bp.images_upload') }}">Upload new</a></p>
+
+  <ul style="list-style:none; padding:0;">
+    {% for img in images %}
+      {% set original = (img.files | selectattr("variant", "equalto", "original") | list | first) %}
+      <li style="margin-bottom: 1.5rem;">
+        <div><strong>{{ img.title or "Untitled" }}</strong></div>
+        <div style="font-size: 0.9rem; opacity: 0.8;">{{ img.id }}</div>
+        {% if original %}
+          <img src="{{ original.public_url }}" style="max-width:240px; height:auto; margin-top: 0.5rem;">
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}

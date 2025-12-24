@@ -1,8 +1,11 @@
 from flask import render_template, request, url_for, redirect, current_app, flash
 from utils.decorators import admin_required
 from . import admin_bp
-from models import Location, Image, Route, RouteStop
+from models import Location, Image, Route, RouteStop, ImageAsset, ImageFile
 from extensions import db
+from utils.ids import new_ulid
+from utils.supabase_storage import upload_file_bytes, public_url, SUPABASE_BUCKET
+
 
 import os
 
@@ -145,6 +148,7 @@ def delete_location(location_id):
         stop_count=stop_count
     )
 
+#old images functionality:
 
 @admin_bp.route('/photos')
 @admin_required
@@ -466,3 +470,53 @@ def delete_stop(stop_id):
         return redirect(url_for('admin.manage_stops', route_id=route_id))
 
     return render_template('admin/stop_delete.html', stop=stop)
+
+#new images functionality:
+@admin_bp.route("/images")
+@admin_required
+def images_list():
+    images = ImageAsset.query.order_by(ImageAsset.created_at.desc()).limit(200).all()
+    return render_template("admin/images_list.html", images=images)
+
+@admin_bp.route("/images/upload", methods=["GET", "POST"])
+@admin_required
+def images_upload():
+    if request.method == "POST":
+        f = request.files.get("file")
+        title = (request.form.get("title") or "").strip() or None
+        description = (request.form.get("description") or "").strip() or None
+
+        if not f or f.filename == "":
+            flash("Please choose a file.", "error")
+            return redirect(request.url)
+
+        # Create IDs + keys
+        image_id = new_ulid()
+        filename = secure_filename(f.filename)
+        ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else "jpg"
+
+        storage_key = f"original/{image_id}.{ext}"
+        content = f.read()
+        mime_type = f.mimetype
+
+        # Upload to Supabase
+        upload_file_bytes(storage_key=storage_key, content=content, content_type=mime_type)
+
+        # Create DB rows
+        img = ImageAsset(id=image_id, title=title, description=description)
+        db.session.add(img)
+
+        file_row = ImageFile(
+            image_id=image_id,
+            variant="original",
+            bucket=SUPABASE_BUCKET,
+            storage_key=storage_key,
+            public_url=public_url(storage_key),
+        )
+        db.session.add(file_row)
+
+        db.session.commit()
+        flash("Uploaded image to Supabase.", "success")
+        return redirect(url_for("admin_bp.images_list"))
+
+    return render_template("admin/images_upload.html")
