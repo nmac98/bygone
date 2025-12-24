@@ -517,6 +517,6 @@ def images_upload():
 
         db.session.commit()
         flash("Uploaded image to Supabase.", "success")
-        return redirect(url_for("admin_bp.images_list"))
+        return redirect(url_for("admin.images_list"))
 
     return render_template("admin/images_upload.html")

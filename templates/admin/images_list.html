@@ -3,7 +3,7 @@
 {% block content %}
 <div class="admin-container">
   <h1>Image Library</h1>
-  <p><a href="{{ url_for('admin_bp.images_upload') }}">Upload new</a></p>
+  <p><a href="{{ url_for('admin.images_upload') }}">Upload new</a></p>
 
   <ul style="list-style:none; padding:0;">
     {% for img in images %}
