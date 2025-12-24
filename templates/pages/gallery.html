@@ -5,18 +5,31 @@
 {% block content %}
 <!--script for image carousel-->
     <script>
-        // Make the image data available globally
-        images = [
-            {% for img in location.images %}
-                {
-                    file: "/static/images/{{ img.file }}",
-                    title: "{{ img.title }}"
-                }{% if not loop.last %},{% endif %}
-            {% endfor %}
-        ];
+    images = [
+        // Supabase images
+        {% for asset in location.supabase_image_assets %}
+        {% set original = (asset.files | selectattr("variant", "equalto", "original") | list | first) %}
+        {% if original %}
+        {
+            file: "{{ original.public_url }}",
+            title: "{{ asset.title or '' }}"
+        }{% if not loop.last %},{% endif %}
+        {% endif %}
+        {% endfor %}
 
-        // Always start at index 0 when loading page
-        currentIndex = 0;
+        {% if location.images and location.supabase_image_assets %}
+        , // comma between the two blocks
+        {% endif %}
+
+        // Legacy static images (fallback during migration)
+        {% for img in location.images %}
+        {
+            file: "/static/images/{{ img.file }}",
+            title: "{{ img.title }}"
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+    currentIndex = 0;
     </script>
 
 <div class="location-page">
