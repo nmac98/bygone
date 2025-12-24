@@ -12,6 +12,11 @@ class Location(db.Model):
 
     images = db.relationship('Image', backref='location', lazy=True)
 
+    @property
+    def supabase_image_assets(self):
+        rows = sorted(self.supabase_images, key=lambda r: r.sort_order or 0)
+        return [r.image for r in rows]
+
 class Image(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     file = db.Column(db.String(200))
