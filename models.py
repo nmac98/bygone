@@ -1,5 +1,6 @@
 from extensions import db
 from flask_login import UserMixin
+from datetime import datetime
 
 class Location(db.Model):
     id = db.Column(db.String, primary_key=True)
@@ -37,3 +38,33 @@ class RouteStop(db.Model):
     route_id = db.Column(db.String, db.ForeignKey('route.id'))
     location_id = db.Column(db.String, db.ForeignKey('location.id'))
     location = db.relationship('Location')
+
+class ImageAsset(db.Model):
+    __tablename__ = "images"
+    id = db.Column(db.String(26), primary_key=True)  # ULID
+    title = db.Column(db.String(200))
+    description = db.Column(db.Text)
+    lat = db.Column(db.Float, nullable=True)
+    lon = db.Column(db.Float, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class ImageFile(db.Model):
+    __tablename__ = "image_files"
+    id = db.Column(db.Integer, primary_key=True)
+    image_id = db.Column(db.String(26), db.ForeignKey("images.id"), nullable=False)
+    variant = db.Column(db.String(50), default="original", nullable=False)  # keep minimal
+    bucket = db.Column(db.String(100), nullable=False)
+    storage_key = db.Column(db.String(500), nullable=False)
+    public_url = db.Column(db.String(1000), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    image = db.relationship("ImageAsset", backref=db.backref("files", lazy=True, cascade="all, delete-orphan"))
+
+class LocationImage(db.Model):
+    __tablename__ = "location_images"
+    location_id = db.Column(db.String, db.ForeignKey("location.id"), primary_key=True)
+    image_id = db.Column(db.String(26), db.ForeignKey("images.id"), primary_key=True)
+    sort_order = db.Column(db.Integer, default=0)
+
+    location = db.relationship("Location", backref=db.backref("supabase_images", lazy=True, cascade="all, delete-orphan"))
+    image = db.relationship("ImageAsset", backref=db.backref("locations", lazy=True, cascade="all, delete-orphan"))
