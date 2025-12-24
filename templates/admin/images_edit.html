@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Edit Image{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+  <h1>Edit Image</h1>
+
+  {% if original %}
+    <div style="margin-bottom: 1rem;">
+      <img src="{{ original.public_url }}" style="max-width: 300px; height:auto;">
+    </div>
+  {% endif %}
+
+  <form method="POST" enctype="multipart/form-data">
+    <div class="form-group">
+      <label>Replace file (optional)</label>
+      <input type="file" name="file">
+    </div>
+
+    <div class="form-group">
+      <label>Title / Name</label>
+      <input type="text" name="title" value="{{ img.title or '' }}">
+    </div>
+
+    <div class="form-group">
+      <label>Date</label>
+      <input type="text" name="date" value="{{ img.date or '' }}">
+    </div>
+
+    <div class="form-group">
+      <label>Description</label>
+      <textarea name="description">{{ img.description or '' }}</textarea>
+    </div>
+
+    <div class="form-group">
+      <label>Latitude</label>
+      <input type="text" name="lat" value="{{ lat_val }}">
+    </div>
+
+    <div class="form-group">
+      <label>Longitude</label>
+      <input type="text" name="lon" value="{{ lon_val }}">
+    </div>
+
+    <div class="form-group">
+      <label>Location</label>
+      <select name="location_id">
+        <option value="">-- None --</option>
+        {% for loc in locations %}
+          <option value="{{ loc.id }}" {% if loc.id == current_location_id %}selected{% endif %}>
+            {{ loc.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <button type="submit">Save changes</button>
+  </form>
+</div>
+{% endblock %}

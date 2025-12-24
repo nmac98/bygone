@@ -23,3 +23,9 @@ def public_url(storage_key: str) -> str:
     # Public bucket URL pattern:
     # https://<project>.supabase.co/storage/v1/object/public/<bucket>/<path>
     return f"{SUPABASE_URL}/storage/v1/object/public/{SUPABASE_BUCKET}/{storage_key}"
+
+def delete_file(storage_key: str):
+    sb = client()
+    sb.storage.from_(SUPABASE_BUCKET).remove([storage_key])
+
+    

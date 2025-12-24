@@ -1,23 +1,49 @@
 {% extends "base.html" %}
 {% block title %}Upload Image{% endblock %}
+
 {% block content %}
 <div class="admin-container">
   <h1>Upload Image</h1>
 
   <form method="POST" enctype="multipart/form-data">
     <div class="form-group">
-      <label>File</label>
+      <label>File *</label>
       <input type="file" name="file" required>
     </div>
 
     <div class="form-group">
-      <label>Title (optional)</label>
+      <label>Title / Name</label>
       <input type="text" name="title">
     </div>
 
     <div class="form-group">
-      <label>Description (optional)</label>
+      <label>Date (e.g. "1916", "c. 1900s")</label>
+      <input type="text" name="date">
+    </div>
+
+    <div class="form-group">
+      <label>Description</label>
       <textarea name="description"></textarea>
+    </div>
+
+    <div class="form-group">
+      <label>Latitude</label>
+      <input type="text" name="lat" placeholder="e.g. 53.3498">
+    </div>
+
+    <div class="form-group">
+      <label>Longitude</label>
+      <input type="text" name="lon" placeholder="-6.2603">
+    </div>
+
+    <div class="form-group">
+      <label>Location (optional)</label>
+      <select name="location_id">
+        <option value="">-- None --</option>
+        {% for loc in locations %}
+          <option value="{{ loc.id }}">{{ loc.name }}</option>
+        {% endfor %}
+      </select>
     </div>
 
     <button type="submit">Upload</button>

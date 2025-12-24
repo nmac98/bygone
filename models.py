@@ -1,6 +1,6 @@
 from extensions import db
 from flask_login import UserMixin
-from datetime import datetime
+from datetime import datetime, timezone
 
 class Location(db.Model):
     id = db.Column(db.String, primary_key=True)
@@ -47,11 +47,12 @@ class RouteStop(db.Model):
 class ImageAsset(db.Model):
     __tablename__ = "images"
     id = db.Column(db.String(26), primary_key=True)  # ULID
-    title = db.Column(db.String(200))
-    description = db.Column(db.Text)
+    title = db.Column(db.String(200), nullable=True)
+    date = db.Column(db.String(30), nullable=True)
+    description = db.Column(db.Text, nullable=True)
     lat = db.Column(db.Float, nullable=True)
     lon = db.Column(db.Float, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
 
 class ImageFile(db.Model):
     __tablename__ = "image_files"
@@ -61,7 +62,7 @@ class ImageFile(db.Model):
     bucket = db.Column(db.String(100), nullable=False)
     storage_key = db.Column(db.String(500), nullable=False)
     public_url = db.Column(db.String(1000), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
 
     image = db.relationship("ImageAsset", backref=db.backref("files", lazy=True, cascade="all, delete-orphan"))
 

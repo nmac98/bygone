@@ -1,22 +1,73 @@
 {% extends "base.html" %}
 {% block title %}Image Library{% endblock %}
+
 {% block content %}
 <div class="admin-container">
   <h1>Image Library</h1>
-  <p><a href="{{ url_for('admin.images_upload') }}">Upload new</a></p>
 
-  <ul style="list-style:none; padding:0;">
-    {% for img in images %}
-      {% set original = (img.files | selectattr("variant", "equalto", "original") | list | first) %}
-      <li style="margin-bottom: 1.5rem;">
-        <div><strong>{{ img.title or "Untitled" }}</strong></div>
-        <div style="font-size: 0.9rem; opacity: 0.8;">{{ img.id }}</div>
-        {% if original %}
-          <img src="{{ original.public_url }}" style="max-width:240px; height:auto; margin-top: 0.5rem;">
-          <p><a href="{{ url_for('admin.image_attach', image_id=img.id) }}">Attach to location</a></p>
-        {% endif %}
-      </li>
-    {% endfor %}
-  </ul>
+  <form method="GET" style="margin-bottom: 1rem;">
+    <input type="text" name="q" placeholder="Search by title..."
+           value="{{ search_query or '' }}">
+    <button type="submit">Search</button>
+    <a href="{{ url_for('admin.images_upload') }}">+ Upload new</a>
+  </form>
+
+  {% if images %}
+    <table>
+      <thead>
+        <tr>
+          <th>Preview</th>
+          <th>Title / Date</th>
+          <th>Location</th>
+          <th>Lat / Lon</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for img in images %}
+        {% set original = (img.files | selectattr("variant", "equalto", "original") | list | first) %}
+        {% set loc_rel = (img.locations | list | first) %}
+        <tr>
+          <td>
+            {% if original %}
+              <img src="{{ original.public_url }}" style="max-width: 150px; height:auto;">
+            {% else %}
+              (no file)
+            {% endif %}
+          </td>
+          <td>
+            <strong>{{ img.title or "Untitled" }}</strong><br>
+            <small>{{ img.date or "" }}</small>
+          </td>
+          <td>
+            {% if loc_rel %}
+              {{ loc_rel.location.name }}
+            {% else %}
+              <em>Unassigned</em>
+            {% endif %}
+          </td>
+          <td>
+            {% if img.lat and img.lon %}
+              {{ "%.5f"|format(img.lat) }}, {{ "%.5f"|format(img.lon) }}
+            {% else %}
+              <em>None</em>
+            {% endif %}
+          </td>
+          <td>
+            <a href="{{ url_for('admin.images_edit', image_id=img.id) }}">Edit</a>
+            <form method="POST"
+                  action="{{ url_for('admin.images_delete', image_id=img.id) }}"
+                  style="display:inline;"
+                  onsubmit="return confirm('Delete this image and file?');">
+              <button type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No images yet. <a href="{{ url_for('admin.images_upload') }}">Upload one</a>.</p>
+  {% endif %}
 </div>
 {% endblock %}

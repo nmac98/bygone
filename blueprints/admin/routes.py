@@ -4,7 +4,7 @@ from . import admin_bp
 from models import Location, Image, Route, RouteStop, ImageAsset, ImageFile, LocationImage
 from extensions import db
 from utils.ids import new_ulid
-from utils.supabase_storage import upload_file_bytes, public_url, SUPABASE_BUCKET
+from utils.supabase_storage import upload_file_bytes, public_url, SUPABASE_BUCKET, delete_file
 
 
 import os
@@ -475,22 +475,47 @@ def delete_stop(stop_id):
 @admin_bp.route("/images")
 @admin_required
 def images_list():
-    images = ImageAsset.query.order_by(ImageAsset.created_at.desc()).limit(200).all()
-    return render_template("admin/images_list.html", images=images)
+    q = (request.args.get("q") or "").strip()
+    query = ImageAsset.query
+
+    if q:
+        like = f"%{q}%"
+        query = query.filter(ImageAsset.title.ilike(like))
+
+    images = query.order_by(ImageAsset.created_at.desc()).all()
+    return render_template("admin/images_list.html", images=images, search_query=q)
+
 
 @admin_bp.route("/images/upload", methods=["GET", "POST"])
 @admin_required
 def images_upload():
+    locations = Location.query.order_by(Location.name.asc()).all()
+
     if request.method == "POST":
         f = request.files.get("file")
         title = (request.form.get("title") or "").strip() or None
+        date = (request.form.get("date") or "").strip() or None
         description = (request.form.get("description") or "").strip() or None
+        lat_raw = (request.form.get("lat") or "").strip()
+        lon_raw = (request.form.get("lon") or "").strip()
+        location_id = (request.form.get("location_id") or "").strip() or None
 
         if not f or f.filename == "":
             flash("Please choose a file.", "error")
             return redirect(request.url)
 
-        # Create IDs + keys
+        # Parse lat/lon (nullable)
+        lat = None
+        lon = None
+        try:
+            if lat_raw:
+                lat = float(lat_raw)
+            if lon_raw:
+                lon = float(lon_raw)
+        except ValueError:
+            flash("Latitude / Longitude must be numbers.", "error")
+            return redirect(request.url)
+
         image_id = new_ulid()
         filename = secure_filename(f.filename)
         ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else "jpg"
@@ -500,10 +525,21 @@ def images_upload():
         mime_type = f.mimetype
 
         # Upload to Supabase
-        upload_file_bytes(storage_key=storage_key, content=content, content_type=mime_type)
+        upload_file_bytes(
+            storage_key=storage_key,
+            content=content,
+            content_type=mime_type,
+        )
 
-        # Create DB rows
-        img = ImageAsset(id=image_id, title=title, description=description)
+        # DB rows
+        img = ImageAsset(
+            id=image_id,
+            title=title,
+            date=date,
+            description=description,
+            lat=lat,
+            lon=lon,
+        )
         db.session.add(img)
 
         file_row = ImageFile(
@@ -515,11 +551,16 @@ def images_upload():
         )
         db.session.add(file_row)
 
+        # Optional: link to a location (single for now)
+        if location_id:
+            link = LocationImage(location_id=location_id, image_id=image_id, sort_order=0)
+            db.session.add(link)
+
         db.session.commit()
         flash("Uploaded image to Supabase.", "success")
         return redirect(url_for("admin.images_list"))
 
-    return render_template("admin/images_upload.html")
+    return render_template("admin/images_upload.html", locations=locations)
 
 @admin_bp.route("/images/<image_id>/attach", methods=["GET", "POST"])
 @admin_required
@@ -543,4 +584,120 @@ def image_attach(image_id):
         return redirect(url_for("admin.images_list"))
 
     return render_template("admin/image_attach.html", img=img, locations=locations)
+
+@admin_bp.route("/images/<image_id>/edit", methods=["GET", "POST"])
+@admin_required
+def images_edit(image_id):
+    img = ImageAsset.query.get_or_404(image_id)
+    locations = Location.query.order_by(Location.name.asc()).all()
+    original = next((f for f in img.files if f.variant == "original"), None)
+    current_link = next((rel for rel in img.locations), None)
+    current_location_id = current_link.location_id if current_link else ""
+
+    if request.method == "POST":
+        title = (request.form.get("title") or "").strip() or None
+        date = (request.form.get("date") or "").strip() or None
+        description = (request.form.get("description") or "").strip() or None
+        lat_raw = (request.form.get("lat") or "").strip()
+        lon_raw = (request.form.get("lon") or "").strip()
+        location_id = (request.form.get("location_id") or "").strip() or None
+        new_file = request.files.get("file")
+
+        # lat / lon
+        lat = None
+        lon = None
+        try:
+            if lat_raw:
+                lat = float(lat_raw)
+            if lon_raw:
+                lon = float(lon_raw)
+        except ValueError:
+            flash("Latitude / Longitude must be numbers.", "error")
+            return redirect(request.url)
+
+        # update metadata
+        img.title = title
+        img.date = date
+        img.description = description
+        img.lat = lat
+        img.lon = lon
+
+        # update location link (single for now)
+        LocationImage.query.filter_by(image_id=img.id).delete()
+        if location_id:
+            db.session.add(LocationImage(location_id=location_id, image_id=img.id, sort_order=0))
+
+        # optional: replace file
+        if new_file and new_file.filename:
+            filename = secure_filename(new_file.filename)
+            ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else "jpg"
+            storage_key = f"original/{img.id}.{ext}"
+            content = new_file.read()
+            mime_type = new_file.mimetype
+
+            # delete old file if exists
+            if original:
+                try:
+                    delete_file(original.storage_key)
+                except Exception:
+                    # fail soft – DB will still point to new file
+                    pass
+
+                # re-use the same ImageFile row
+                original.storage_key = storage_key
+                original.public_url = public_url(storage_key)
+                original.bucket = SUPABASE_BUCKET
+            else:
+                # no existing file row – create one
+                original = ImageFile(
+                    image_id=img.id,
+                    variant="original",
+                    bucket=SUPABASE_BUCKET,
+                    storage_key=storage_key,
+                    public_url=public_url(storage_key),
+                )
+                db.session.add(original)
+
+            # upload new file
+            upload_file_bytes(
+                storage_key=storage_key,
+                content=content,
+                content_type=mime_type,
+            )
+
+        db.session.commit()
+        flash("Image updated.", "success")
+        return redirect(url_for("admin.images_list"))
+
+    # GET
+    lat_val = img.lat if img.lat is not None else ""
+    lon_val = img.lon if img.lon is not None else ""
+
+    return render_template(
+        "admin/images_edit.html",
+        img=img,
+        original=original,
+        locations=locations,
+        current_location_id=current_location_id,
+        lat_val=lat_val,
+        lon_val=lon_val,
+    )
+
+@admin_bp.route("/images/<image_id>/delete", methods=["POST"])
+@admin_required
+def images_delete(image_id):
+    img = ImageAsset.query.get_or_404(image_id)
+
+    # delete files from Supabase
+    for f in img.files:
+        try:
+            delete_file(f.storage_key)
+        except Exception:
+            # don't block on storage failure
+            pass
+
+    db.session.delete(img)  # cascades to ImageFile + LocationImage
+    db.session.commit()
+    flash("Image and associated files deleted.", "success")
+    return redirect(url_for("admin.images_list"))
 
