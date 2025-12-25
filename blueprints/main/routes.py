@@ -1,36 +1,60 @@
 from flask import render_template
 from . import main_bp
-from models import Location, Route, Image
+from models import Location, Route, Image, LocationImage, ImageAsset
 from utils.decorators import admin_required
+
+from sqlalchemy.orm import joinedload
 
 @main_bp.route("/")
 def index():
-    locations = Location.query.all()
+    locations = (
+        Location.query
+        .options(
+            joinedload(Location.supabase_images)
+            .joinedload(LocationImage.image)
+            .joinedload(ImageAsset.files)
+        )
+        .all()
+    )
     routes = Route.query.all()
 
-    photos = [
-        {
+    photos_q = (
+        ImageAsset.query
+        .options(joinedload(ImageAsset.files))
+        .filter(ImageAsset.lat.isnot(None), ImageAsset.lon.isnot(None))
+        .all()
+    )
+
+    photos = []
+    for p in photos_q:
+        original = next((f for f in p.files if f.variant == "original"), None)
+        photos.append({
             "id": p.id,
-            "file": p.file,
             "title": p.title,
             "lat": p.lat,
-            "lon": p.lon
-        }
-        for p in Image.query.filter(Image.lat.isnot(None), Image.lon.isnot(None)).all()
-    ]
+            "lon": p.lon,
+            "url": original.public_url if original else None,
+        })
 
-
-    # Prepare data for Leaflet/JS
+    # Location popup data: choose the first linked image by sort_order (if any)
     location_data = []
     for loc in locations:
-        main_image = loc.images[0].file if loc.images else "placeholder.jpg"
+        li_sorted = sorted(loc.supabase_images, key=lambda x: x.sort_order or 0)
+
+        main_image_url = None
+        if li_sorted:
+            asset = li_sorted[0].image
+            original = next((f for f in asset.files if f.variant == "original"), None)
+            if original:
+                main_image_url = original.public_url
+
         location_data.append({
             "id": loc.id,
             "name": loc.name,
             "lat": loc.lat,
             "lon": loc.lon,
             "description": loc.description,
-            "main_image": main_image,
+            "main_image_url": main_image_url,  # <-- NEW
         })
 
     return render_template(

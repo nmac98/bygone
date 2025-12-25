@@ -53,9 +53,13 @@
 
     const marker = L.marker([loc.lat, loc.lon]).addTo(map);
 
+    const imgHtml = loc.main_image_url
+      ? `<img src="${loc.main_image_url}" width="200"><br>`
+      : "";
+
     const popupHtml = `
       <b>${loc.name}</b><br>
-      <img src="/static/images/${loc.main_image}" width="200"><br>
+      ${imgHtml}
       <a href="/gallery/${loc.id}" target="_blank">See more photos</a>
     `;
 
@@ -77,10 +81,14 @@
 
     const marker = L.marker([photo.lat, photo.lon], { icon }).addTo(map);
 
+    const photoImg = photo.url
+      ? `<img src="${photo.url}" width="180"><br>`
+      : "";
+
     const popupHtml = `
-        <b>${photo.title}</b><br>
-        <img src="/static/images/${photo.file}" width="180"><br>
-        <small>Photo</small>
+      <b>${photo.title || "Untitled"}</b><br>
+      ${photoImg}
+      <small>Photo</small>
     `;
 
     marker.bindPopup(popupHtml);

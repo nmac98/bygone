@@ -1,13 +1,22 @@
 from flask import render_template, abort, request
 from . import locations_bp
-from models import Location, Route
+from models import Location, Route, LocationImage, ImageAsset
+from sqlalchemy.orm import joinedload   
 
 @locations_bp.route("/gallery/<loc_id>")
 def gallery(loc_id):
 
-    loc = Location.query.get(loc_id)
+    loc = (
+        Location.query
+        .options(
+            joinedload(Location.supabase_images)
+            .joinedload(LocationImage.image)
+            .joinedload(ImageAsset.files)
+        )
+        .get(loc_id)
+    )
     if not loc:
-        abort(404)
+        abort(404, description="Location not found")
 
     map_data = {
         "lat": loc.lat,

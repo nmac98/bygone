@@ -5,32 +5,24 @@
 {% block content %}
 <!--script for image carousel-->
     <script>
+    {% set ns = namespace(first=true) %}
     images = [
-        // Supabase images
-        {% for asset in location.supabase_image_assets %}
+        {% for li in (location.supabase_images | sort(attribute="sort_order")) %}
+        {% set asset = li.image %}
         {% set original = (asset.files | selectattr("variant", "equalto", "original") | list | first) %}
         {% if original %}
-        {
+            {% if not ns.first %},{% endif %}
+            {
             file: "{{ original.public_url }}",
             title: "{{ asset.title or '' }}"
-        }{% if not loop.last %},{% endif %}
+            }
+            {% set ns.first = false %}
         {% endif %}
-        {% endfor %}
-
-        {% if location.images and location.supabase_image_assets %}
-        , // comma between the two blocks
-        {% endif %}
-
-        // Legacy static images (fallback during migration)
-        {% for img in location.images %}
-        {
-            file: "/static/images/{{ img.file }}",
-            title: "{{ img.title }}"
-        }{% if not loop.last %},{% endif %}
         {% endfor %}
     ];
     currentIndex = 0;
     </script>
+
 
 <div class="location-page">
 
