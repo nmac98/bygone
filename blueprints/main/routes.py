@@ -33,6 +33,8 @@ def index():
             "lat": p.lat,
             "lon": p.lon,
             "url": original.public_url if original else None,
+            "date": p.date,
+            "description": p.description,  
         })
 
     # Location popup data: choose the first linked image by sort_order (if any)

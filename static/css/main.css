@@ -160,17 +160,18 @@ html, body {
     width: 100%;
     max-width: 100%;
     overflow: hidden;
-    display: flex;
+    display: block;
     justify-content: center;
     margin-bottom: 20px;
 }
 
 .carousel-main-img {
     width: 100%;
-    height: 55vh;                 /* FIXED HEIGHT — prevents page jumping */
+    height: 55vh;                 /* See this if no luck on caption front - FIXED HEIGHT — prevents page jumping */
     object-fit: contain;
     background: #000;
     border-radius: 10px;
+    display: block;
 }
 
 .carousel-btn {
@@ -202,6 +203,148 @@ html, body {
     background: #222;
 }
 
+.carousel-stage {
+  position: relative;
+}
+
+.caption-overlay {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  line-height: 1.2;
+  backdrop-filter: blur(8px);
+}
+
+.caption-row {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  opacity: 0.85;
+  margin-bottom: 6px;
+}
+
+.caption-date {
+  white-space: nowrap;
+  opacity: 0.8;
+}
+
+.caption-title {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.caption-info-btn {
+  border: 0;
+  background: rgb(168, 167, 167);
+  font-size: 1rem;
+  padding: 6px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.carousel-caption {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  line-height: 1.25;
+  backdrop-filter: blur(8px);
+  transition: max-height 0.25s ease, padding 0.25s ease;
+  overflow: hidden;
+}
+
+/* Header row */
+.caption-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* One-line header */
+.caption-date {
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
+.caption-title {
+  font-weight: 600;
+  line-height: 1.2 ;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.carousel-caption.collapsed .caption-title,
+.carousel-caption.expanded .caption-title {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.carousel-caption.expanded .caption-title,
+.lightbox-caption.expanded .caption-title {
+  white-space: normal;
+  overflow: visible;
+}
+
+/* Info button */
+.caption-info-btn {
+  border: 0;
+  color: white;
+  background: transparent;
+  font-size: 1rem;
+  padding: 6px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+/* Description text */
+.caption-description {
+  margin-top: 8px;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+/* COLLAPSED STATE */
+.carousel-caption.collapsed {
+  max-height: 2.6em;   /* header only */
+}
+
+/* EXPANDED STATE */
+.carousel-caption.expanded {
+  max-height: 60vh;    /* prevents swallowing screen */
+  padding-bottom: 14px;
+}
+
+/* Hide description when collapsed */
+.carousel-caption.collapsed .caption-description {
+  display: none;
+}
+
+/* Desktop polish */
+@media (min-width: 900px) {
+  .carousel-caption {
+    left: 18px;
+    right: 18px;
+    bottom: 18px;
+    font-size: 0.9rem;
+  }
+}
+
+
 /* Mobile layout improvements */
 @media (max-width: 600px) {
     .carousel-btn {
@@ -231,7 +374,6 @@ html, body {
     object-fit: contain;
     border-radius: 12px;
 }
-
 .lightbox-close {
     position: absolute;
     top: 20px;
@@ -246,6 +388,40 @@ html, body {
     cursor: pointer;
     backdrop-filter: blur(5px);
 }
+
+.lightbox-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 2rem;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+.lightbox-nav.prev { left: 18px; }
+.lightbox-nav.next { right: 18px; }
+
+
+.lightbox-caption {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  line-height: 1.25;
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+  transition: max-height 0.25s ease;
+}
+
+.lightbox-caption.collapsed { max-height: 2.6em; }
+.lightbox-caption.expanded  { max-height: 60vh; }
+
+.lightbox-caption.collapsed .caption-description { display: none; }
 
 
 /* ===========================

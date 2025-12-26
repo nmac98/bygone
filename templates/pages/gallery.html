@@ -6,21 +6,24 @@
 <!--script for image carousel-->
     <script>
     {% set ns = namespace(first=true) %}
-    images = [
+    window.images = [
         {% for li in (location.supabase_images | sort(attribute="sort_order")) %}
         {% set asset = li.image %}
-        {% set original = (asset.files | selectattr("variant", "equalto", "original") | list | first) %}
+        {% set original = (asset.files | selectattr("variant", "equalto", "original") | list | first)
+                            or (asset.files | list | first) %}
         {% if original %}
             {% if not ns.first %},{% endif %}
             {
-            file: "{{ original.public_url }}",
-            title: "{{ asset.title or '' }}"
+            file: {{ original.public_url | tojson }},
+            title: {{ (asset.title or '') | tojson }},
+            date: {{ (asset.date or '') | tojson }},
+            description: {{ (asset.description or '') | tojson }}
             }
             {% set ns.first = false %}
         {% endif %}
         {% endfor %}
     ];
-    currentIndex = 0;
+    window.currentIndex = 0;
     </script>
 
 
@@ -32,15 +35,38 @@
     <!-- IMAGE CAROUSEL -->
     <section class="image-carousel">
 
+    <div class="carousel-stage">
         <img 
-            id="carousel-image"
-            class="carousel-main-img"
-            onclick="openLightbox()"
+        id="carousel-image"
+        class="carousel-main-img"
+        onclick="openLightbox()"
         >
 
         <!-- NAV BUTTONS OVER IMAGE -->
         <button class="carousel-btn prev" onclick="prevImage()">←</button>
         <button class="carousel-btn next" onclick="nextImage()">→</button>
+
+        <div class="carousel-caption collapsed" id="carousel-caption">
+        <div class="caption-header">
+            <span class="caption-date" id="caption-date"></span>
+            <span class="caption-title" id="caption-title"></span>
+
+            <button
+            class="caption-info-btn"
+            id="caption-info-btn"
+            type="button"
+            onclick="toggleCaption(event)"
+            aria-label="Photo information"
+            style="display:none;"
+            >
+            ⓘ
+            </button>
+        </div>
+
+        <div class="caption-description" id="caption-desc"></div>
+        </div>
+    </div>
+
     </section>
 
 
@@ -150,8 +176,33 @@
 {% endif %}
 
 <div id="lightbox" class="lightbox" onclick="closeLightbox(event)">
-    <img id="lightbox-img" class="lightbox-img" />
-    <button class="lightbox-close" onclick="closeLightbox(event)">✕</button>
+  <button class="lightbox-nav prev" onclick="lightboxPrev(event)" aria-label="Previous image">←</button>
+
+  <img id="lightbox-img" class="lightbox-img" />
+
+  <button class="lightbox-nav next" onclick="lightboxNext(event)" aria-label="Next image">→</button>
+  <button class="lightbox-close" onclick="closeLightbox(event)" aria-label="Close">✕</button>
+
+  <!-- Lightbox caption overlay (same museum logic) -->
+  <div class="lightbox-caption collapsed" id="lightbox-caption" onclick="event.stopPropagation()">
+    <div class="caption-header">
+      <span class="caption-date" id="lightbox-caption-date"></span>
+      <span class="caption-title" id="lightbox-caption-title"></span>
+
+      <button
+        class="caption-info-btn"
+        id="lightbox-caption-info-btn"
+        type="button"
+        onclick="toggleLightboxCaption(event)"
+        aria-label="Photo information"
+        style="display:none;"
+      >ⓘ</button>
+    </div>
+
+    <div class="caption-description" id="lightbox-caption-desc"></div>
+  </div>
 </div>
+
+
 
 {% endblock %}

@@ -152,6 +152,15 @@ def delete_location(location_id):
         stop_count=stop_count
     )
 
+@admin_bp.route("/routes")
+@admin_required
+def admin_routes():
+    routes = Route.query.order_by(Route.id.asc()).all()
+    return render_template(
+        "admin/routes_list.html",
+        routes=routes
+    )
+
 @admin_bp.route('/route/new', methods=['GET', 'POST'])
 @admin_required
 def new_route():

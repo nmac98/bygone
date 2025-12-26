@@ -47,59 +47,184 @@ document.addEventListener("DOMContentLoaded", () => {
 // 3. IMAGE CAROUSEL (Gallery Page)
 // ---------------------------------------------------------
 
+// Ensure globals exist (prevents ReferenceError on pages where template didn't set them yet)
+window.images = window.images || [];
+window.currentIndex = window.currentIndex || 0;
+
+function renderCarousel() {
+  const imgEl = document.getElementById("carousel-image");
+  if (!images || images.length === 0) return;
+
+  imgEl.src = images[currentIndex].file;
+  imgEl.alt = images[currentIndex].title || "";
+
+  updateCaption();
+}
+
 function updateCarousel() {
-    const imgEl = document.getElementById("carousel-image");
-    if (!imgEl || images.length === 0) return;
+  const imgEl = document.getElementById("carousel-image");
+  if (!imgEl || !window.images || window.images.length === 0) return;
 
-    imgEl.src = images[currentIndex].file;
-    imgEl.alt = images[currentIndex].title;
+  imgEl.src = images[currentIndex].file;
+  imgEl.alt = images[currentIndex].title || "";
 
-    // Update fullscreen modal too (optional)
-    const modalImg = document.getElementById("lightbox-img");
-    if (modalImg) modalImg.src = images[currentIndex].file;
+  const modalImg = document.getElementById("lightbox-img");
+  if (modalImg) modalImg.src = images[currentIndex].file;
 }
 
 function nextImage() {
     if (images.length === 0) return;
     currentIndex = (currentIndex + 1) % images.length;
     updateCarousel();
+    updateCaption();
 }
 
 function prevImage() {
     if (images.length === 0) return;
     currentIndex = (currentIndex - 1 + images.length) % images.length;
     updateCarousel();
+    updateCaption();
 }
 
 // Initialize carousel only if it exists
 document.addEventListener("DOMContentLoaded", () => {
     if (exists("#carousel-image")) {
         updateCarousel();
+        updateCaption();
     }
 });
 
+// Caption Gallery Logic
 
+function updateCaption() {
+  const caption = document.getElementById("carousel-caption");
+  const dateEl = document.getElementById("caption-date");
+  const titleEl = document.getElementById("caption-title");
+  const descEl = document.getElementById("caption-desc");
+  const infoBtn = document.getElementById("caption-info-btn");
+
+  if (!window.images || images.length === 0) return;
+
+  const img = images[currentIndex] || {};
+
+  dateEl.textContent = img.date || "";
+  titleEl.textContent = img.title || "";
+  descEl.textContent = img.description || "";
+
+  caption.classList.add("collapsed");
+  caption.classList.remove("expanded");
+
+  const hasDesc = (img.description || "").trim().length > 0;
+  infoBtn.style.display = hasDesc ? "inline-block" : "none";
+}
+
+function toggleCaption(e) {
+  if (e) e.stopPropagation();
+
+  const caption = document.getElementById("carousel-caption");
+  if (!caption) return;
+
+  const isCollapsed = caption.classList.contains("collapsed");
+
+  caption.classList.toggle("collapsed", !isCollapsed);
+  caption.classList.toggle("expanded", isCollapsed);
+}
+
+function updateLightboxCaption() {
+  const caption = document.getElementById("lightbox-caption");
+  const dateEl = document.getElementById("lightbox-caption-date");
+  const titleEl = document.getElementById("lightbox-caption-title");
+  const descEl = document.getElementById("lightbox-caption-desc");
+  const infoBtn = document.getElementById("lightbox-caption-info-btn");
+
+  if (!caption || !dateEl || !titleEl || !descEl || !infoBtn) return;
+  if (!window.images || images.length === 0) return;
+
+  const img = images[currentIndex] || {};
+  dateEl.textContent = img.date || "";
+  titleEl.textContent = img.title || "";
+  descEl.textContent = img.description || "";
+
+  caption.classList.add("collapsed");
+  caption.classList.remove("expanded");
+
+  const hasDesc = (img.description || "").trim().length > 0;
+  infoBtn.style.display = hasDesc ? "inline-block" : "none";
+  infoBtn.textContent = "ⓘ";
+}
+
+function toggleLightboxCaption(e) {
+  if (e) e.stopPropagation();
+
+  const caption = document.getElementById("lightbox-caption");
+  const infoBtn = document.getElementById("lightbox-caption-info-btn");
+  if (!caption || !infoBtn) return;
+
+  const willExpand = caption.classList.contains("collapsed");
+  caption.classList.toggle("collapsed", !willExpand);
+  caption.classList.toggle("expanded", willExpand);
+
+  infoBtn.textContent = willExpand ? "✕" : "ⓘ";
+}
+
+//end caption logic
 
 // ---------------------------------------------------------
 // 4. FULLSCREEN LIGHTBOX VIEWER
 // ---------------------------------------------------------
 
-function openLightbox() {
-    const modal = document.getElementById("lightbox");
-    const modalImg = document.getElementById("lightbox-img");
+function openLightbox(index = currentIndex) {
+  currentIndex = index;
 
-    if (!modal || !modalImg) return;
+  const lb = document.getElementById("lightbox");
+  const lbImg = document.getElementById("lightbox-img");
 
-    modalImg.src = images[currentIndex]?.file || "";
-    modal.style.display = "flex";
+  lb.style.display = "flex"; // or add a class if you prefer
+  lbImg.src = images[currentIndex].file;
+  lbImg.alt = images[currentIndex].title || "";
+
+  // optional: prevent background scroll on mobile
+  document.body.style.overflow = "hidden";
+
+  updateLightboxCaption();
 }
 
-function closeLightbox(event) {
-    event?.stopPropagation();
-    const modal = document.getElementById("lightbox");
-    if (modal) modal.style.display = "none";
+function closeLightbox(e) {
+  // allow calls from button clicks; stop bubbling so overlay click doesn't fire twice
+  if (e) e.stopPropagation();
+
+  const lb = document.getElementById("lightbox");
+  lb.style.display = "none";
+
+  document.body.style.overflow = "";
 }
 
+function setLightboxImage() {
+  const lbImg = document.getElementById("lightbox-img");
+  lbImg.src = images[currentIndex].file;
+  lbImg.alt = images[currentIndex].title || "";
+
+  // keep carousel in sync (so when they close, the main image matches)
+  renderCarousel();
+
+  updateLightboxCaption();
+}
+
+function lightboxPrev(e) {
+  e.stopPropagation();
+  if (!images || images.length === 0) return;
+
+  currentIndex = (currentIndex - 1 + images.length) % images.length;
+  setLightboxImage();
+}
+
+function lightboxNext(e) {
+  e.stopPropagation();
+  if (!images || images.length === 0) return;
+
+  currentIndex = (currentIndex + 1) % images.length;
+  setLightboxImage();
+}
 
 
 // ---------------------------------------------------------
@@ -126,11 +251,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 });
-
-// test
-
-console.log("Photos:", photos);
-
 
 // ---------------------------------------------------------
 // END OF main.js
