@@ -1,47 +1,41 @@
 from extensions import db
-from flask_login import UserMixin
 from datetime import datetime, timezone
 
-class Location(db.Model):
-    id = db.Column(db.String, primary_key=True)
-    name = db.Column(db.String(200))
-    lat = db.Column(db.Float)
-    lon = db.Column(db.Float)
-    description = db.Column(db.Text)
-    themes = db.Column(db.JSON)
+def utcnow():
+    return datetime.now(timezone.utc)
 
-    images = db.relationship('Image', backref='location', lazy=True)
+class Location(db.Model):
+    __tablename__ = "location"
+
+    id = db.Column(db.String, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    lat = db.Column(db.Float, nullable=True)
+    lon = db.Column(db.Float, nullable=True)
+    description = db.Column(db.Text, nullable=True)
+    themes = db.Column(db.JSON, nullable=True)
 
     @property
     def supabase_image_assets(self):
         rows = sorted(self.supabase_images, key=lambda r: r.sort_order or 0)
         return [r.image for r in rows]
 
-class Image(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    file = db.Column(db.String(200))
-    title = db.Column(db.String(200))
-    date = db.Column(db.String(20))
-    description = db.Column(db.Text)
-    lat = db.Column(db.Float, nullable=True)
-    lon = db.Column(db.Float, nullable=True)
-    show_on_map = db.Column(db.Boolean, default=False)
-    
-    location_id = db.Column(db.String, db.ForeignKey('location.id'))
-
 class Route(db.Model):
-    id = db.Column(db.String, primary_key=True)
-    name = db.Column(db.String(200))
-    description = db.Column(db.Text)
+    __tablename__ = "route"
 
-    stops = db.relationship('RouteStop', backref='route', lazy=True, order_by="RouteStop.order")
+    id = db.Column(db.String, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+
+    stops = db.relationship('RouteStop', backref='route', lazy=True, order_by="RouteStop.order", cascade="all, delete-orphan")
 
 class RouteStop(db.Model):
+    __tablename__ = "route_stop"
+
     id = db.Column(db.Integer, primary_key=True)
-    order = db.Column(db.Integer)
-    dialogue = db.Column(db.Text)
-    route_id = db.Column(db.String, db.ForeignKey('route.id'))
-    location_id = db.Column(db.String, db.ForeignKey('location.id'))
+    order = db.Column(db.Integer, nullable=False)
+    dialogue = db.Column(db.Text, nullable=True)
+    route_id = db.Column(db.String, db.ForeignKey('route.id'), nullable=False)
+    location_id = db.Column(db.String, db.ForeignKey('location.id'), nullable=False)
     location = db.relationship('Location')
 
 class ImageAsset(db.Model):
@@ -52,7 +46,7 @@ class ImageAsset(db.Model):
     description = db.Column(db.Text, nullable=True)
     lat = db.Column(db.Float, nullable=True)
     lon = db.Column(db.Float, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime(timezone=True), default=utcnow, nullable=False)
 
 class ImageFile(db.Model):
     __tablename__ = "image_files"
@@ -62,7 +56,7 @@ class ImageFile(db.Model):
     bucket = db.Column(db.String(100), nullable=False)
     storage_key = db.Column(db.String(500), nullable=False)
     public_url = db.Column(db.String(1000), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime(timezone=True), default=utcnow, nullable=False)
 
     image = db.relationship("ImageAsset", backref=db.backref("files", lazy=True, cascade="all, delete-orphan"))
 

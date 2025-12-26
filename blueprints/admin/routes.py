@@ -1,13 +1,12 @@
-from flask import render_template, request, url_for, redirect, current_app, flash
+from flask import render_template, request, url_for, redirect, flash
 from utils.decorators import admin_required
 from . import admin_bp
-from models import Location, Image, Route, RouteStop, ImageAsset, ImageFile, LocationImage
+from models import Location, Route, RouteStop, ImageAsset, ImageFile, LocationImage
 from extensions import db
 from utils.ids import new_ulid
 from utils.supabase_storage import upload_file_bytes, public_url, SUPABASE_BUCKET, delete_file
+from sqlalchemy.orm import joinedload
 
-
-import os
 
 from werkzeug.utils import secure_filename
 
@@ -109,177 +108,49 @@ def edit_location(location_id):
 def delete_location(location_id):
     location = Location.query.get_or_404(location_id)
 
-    # How many photos use this location?
-    photos = Image.query.filter_by(location_id=location_id).all()
-    photo_count = len(photos)
+    # How many Supabase images are linked to this location?
+    links = (
+        LocationImage.query
+        .options(joinedload(LocationImage.image).joinedload(ImageAsset.files))
+        .filter_by(location_id=location_id)
+        .all()
+    )
+    photo_count = len(links)
 
     # How many route stops use this location?
     stops = RouteStop.query.filter_by(location_id=location_id).all()
     stop_count = len(stops)
 
-    # POST: perform delete only when allowed
     if request.method == 'POST':
 
-        # BLOCK DELETION if location is still used in route stops
+        # BLOCK deletion if still used in route stops
         if stop_count > 0:
             flash(
                 "You can only remove a location when it is removed from all tour routes.",
                 "error"
             )
-            return redirect(url_for('admin.delete_location', location_id=location_id))
+            return redirect(url_for('admin_bp.delete_location', location_id=location_id))
 
-        # Detach all photos first
-        for img in photos:
-            img.location_id = None
+        # Detach all linked images (delete join rows)
+        LocationImage.query.filter_by(location_id=location_id).delete(synchronize_session=False)
 
         # Now delete the location
         db.session.delete(location)
         db.session.commit()
 
-        flash("Location deleted and photos detached.", "success")
-        return redirect(url_for('admin.admin_locations'))
+        flash("Location deleted and linked images detached.", "success")
+        return redirect(url_for('admin_bp.admin_locations'))
 
+    # For GET: show some useful info in the confirmation page.
+    # Pass the LocationImage rows so you can display which images would be detached.
     return render_template(
         'admin/location_delete.html',
         location=location,
-        photos=photos,
+        photo_links=links,   # renamed from photos
         stops=stops,
         photo_count=photo_count,
         stop_count=stop_count
     )
-
-#old images functionality:
-
-@admin_bp.route('/photos')
-@admin_required
-def admin_photos():
-    images = Image.query.order_by(Image.id.desc()).all()
-    return render_template('admin/photos_list.html', images=images)
-
-
-@admin_bp.route('/photo/upload', methods=['GET', 'POST'])
-@admin_required
-def upload_photo():
-    locations = Location.query.order_by(Location.name).all()
-
-    if request.method == 'POST':
-        file = request.files.get('file')
-
-        if not file or file.filename == '':
-            flash('No file selected.', 'error')
-            return redirect(request.url)
-
-        if not allowed_file(file.filename):
-            flash('Invalid file type. Please upload an image.', 'error')
-            return redirect(request.url)
-
-        filename = secure_filename(file.filename)
-
-        # Save to static/images
-        images_folder = os.path.join(current_app.root_path, 'static', 'images')
-        os.makedirs(images_folder, exist_ok=True)
-
-        save_path = os.path.join(images_folder, filename)
-
-        # If file exists, tweak filename
-        original_filename = filename
-        counter = 1
-        while os.path.exists(save_path):
-            name, ext = os.path.splitext(original_filename)
-            filename = f"{name}_{counter}{ext}"
-            save_path = os.path.join(images_folder, filename)
-            counter += 1
-
-        file.save(save_path)
-
-        # Create Image record
-        title = request.form.get('title') or ''
-        date = request.form.get('date') or ''
-        description = request.form.get('description') or ''
-        location_id = request.form.get('location_id') or None
-
-        # Optional lat/lon + show_on_map
-        lat_raw = request.form.get('lat') or None
-        lon_raw = request.form.get('lon') or None
-        show_on_map = bool(request.form.get('show_on_map'))
-
-        lat = float(lat_raw) if lat_raw else None
-        lon = float(lon_raw) if lon_raw else None
-
-        new_image = Image(
-            file=filename,
-            title=title,
-            date=date,
-            description=description,
-            location_id=location_id,
-            lat=lat,
-            lon=lon,
-            show_on_map=show_on_map
-        )
-
-        db.session.add(new_image)
-        db.session.commit()
-
-        flash('Image uploaded successfully.', 'success')
-        return redirect(url_for('admin.admin_photos'))
-
-    return render_template('admin/photo_upload.html', locations=locations)
-
-
-@admin_bp.route('/photo/<int:image_id>/edit', methods=['GET', 'POST'])
-@admin_required
-def edit_photo(image_id):
-    image = Image.query.get_or_404(image_id)
-    locations = Location.query.order_by(Location.name).all()
-
-    if request.method == 'POST':
-        image.title = request.form.get('title') or ''
-        image.date = request.form.get('date') or ''
-        image.description = request.form.get('description') or ''
-        image.location_id = request.form.get('location_id') or None
-
-        lat_raw = request.form.get('lat') or None
-        lon_raw = request.form.get('lon') or None
-        image.lat = float(lat_raw) if lat_raw else None
-        image.lon = float(lon_raw) if lon_raw else None
-
-        image.show_on_map = bool(request.form.get('show_on_map'))
-
-        db.session.commit()
-        flash('Image updated successfully.', 'success')
-        return redirect(url_for('admin.admin_photos'))
-
-    return render_template('admin/photo_edit.html', image=image, locations=locations)
-
-
-@admin_bp.route('/photo/<int:image_id>/delete', methods=['GET', 'POST'])
-@admin_required
-def delete_photo(image_id):
-    image = Image.query.get_or_404(image_id)
-
-    if request.method == 'POST':
-        # Delete file from disk (optional but nice)
-        images_folder = os.path.join(current_app.root_path, 'static', 'images')
-        file_path = os.path.join(images_folder, image.file)
-        if os.path.exists(file_path):
-            try:
-                os.remove(file_path)
-            except OSError:
-                # Don't crash if deletion fails
-                pass
-
-        db.session.delete(image)
-        db.session.commit()
-        flash('Image deleted.', 'success')
-        return redirect(url_for('admin.admin_photos'))
-
-    return render_template('admin/photo_delete.html', image=image)
-
-@admin_bp.route('/routes')
-@admin_required
-def admin_routes():
-    routes = Route.query.order_by(Route.name).all()
-    return render_template('admin/routes_list.html', routes=routes)
 
 @admin_bp.route('/route/new', methods=['GET', 'POST'])
 @admin_required

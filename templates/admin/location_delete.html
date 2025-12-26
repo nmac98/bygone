@@ -8,11 +8,25 @@
   <h3>Attached Photos</h3>
   {% if photo_count > 0 %}
     <ul>
-      {% for img in photos %}
-        <li>
-          <img src="{{ url_for('static', filename='images/' ~ img.file) }}"
-               style="height: 60px; object-fit: cover; margin-right: 10px;">
-          {{ img.title or img.file }}
+      {% for link in photo_links %}
+        {% set asset = link.image %}
+        {% set original = (asset.files | selectattr("variant", "equalto", "original") | list | first) %}
+        <li style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+          {% if original %}
+            <img src="{{ original.public_url }}"
+                 alt="{{ asset.title or asset.id }}"
+                 style="height: 60px; width:auto; object-fit: cover; border-radius: 6px;">
+          {% else %}
+            <div style="height:60px; width:90px; display:flex; align-items:center; justify-content:center; border:1px solid #ddd; border-radius:6px;">
+              <small>No file</small>
+            </div>
+          {% endif %}
+
+          <div>
+            <div><strong>{{ asset.title or "Untitled" }}</strong></div>
+            {% if asset.date %}<div style="font-size:0.9rem; opacity:0.8;">{{ asset.date }}</div>{% endif %}
+            <div style="font-size:0.8rem; opacity:0.7;">{{ asset.id }}</div>
+          </div>
         </li>
       {% endfor %}
     </ul>

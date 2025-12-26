@@ -1,7 +1,6 @@
 from flask import render_template
 from . import main_bp
-from models import Location, Route, Image, LocationImage, ImageAsset
-from utils.decorators import admin_required
+from models import Location, Route, LocationImage, ImageAsset
 
 from sqlalchemy.orm import joinedload
 
