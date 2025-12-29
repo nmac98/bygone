@@ -95,49 +95,118 @@
     </section>
 
     <!-- (4) EXPANDABLE HISTORY SECTION -->
+    <!-- (4) EXPANDABLE HISTORY SECTION -->
     <section class="location-history">
         <h2>History</h2>
 
-        <div class="accordion">
+        {% if location.chapters and location.chapters|length %}
+            <div class="accordion" id="history-accordion">
+            {% for ch in (location.chapters | sort(attribute="sort_order")) %}
+                <div class="accordion-item">
+                <button
+                    class="accordion-header"
+                    type="button"
+                    aria-expanded="false"
+                    aria-controls="chapter-panel-{{ ch.id }}"
+                    data-accordion-btn
+                >
+                    {{ ch.title }}
+                </button>
 
-            <!-- CHAPTER TEMPLATE (you will replace placeholders later) -->
-            <div class="accordion-item">
-                <button class="accordion-header">17th Century</button>
-                <div class="accordion-body">
-                    <p>Placeholder text for 17th century history.</p>
+                <div
+                    class="accordion-body"
+                    id="chapter-panel-{{ ch.id }}"
+                    hidden
+                    data-accordion-panel
+                >
+                    {% if ch.summary %}
+                    <p class="chapter-summary">{{ ch.summary }}</p>
+                    {% endif %}
+
+                    {# Blocks #}
+                    {% if ch.blocks and ch.blocks|length %}
+                    {% for b in (ch.blocks | sort(attribute="sort_order")) %}
+
+                        {% if b.block_type == "text" %}
+                        <div class="chapter-block chapter-text">
+                            {{ (b.body or "") | e | replace("\n", "<br>") | safe }}
+                        </div>
+
+                        {% elif b.block_type == "divider" %}
+                        <hr class="chapter-block chapter-divider">
+
+                        {% elif b.block_type == "link" %}
+                        <div class="chapter-block chapter-link">
+                            <a href="{{ b.link_url }}" target="_blank" rel="noopener">
+                            {{ b.link_label or b.link_url }}
+                            </a>
+                            {% if b.link_note %}
+                            <div class="link-note">{{ b.link_note }}</div>
+                            {% endif %}
+                        </div>
+
+                        {% elif b.block_type == "image" %}
+                        {% if b.image_asset %}
+                            {% set asset = b.image_asset %}
+                            {% set original = (asset.files | selectattr("variant", "equalto", "original") | list | first)
+                                            or (asset.files | list | first) %}
+                            {% if original %}
+                            <figure class="chapter-block chapter-image">
+                                <img
+                                src="{{ original.public_url }}"
+                                alt="{{ asset.title or '' }}"
+                                loading="lazy"
+                                onclick="openLightboxAtUrl({{ original.public_url | tojson }})"
+                                style="cursor: pointer;"
+                                >
+                                {% if b.caption_override or asset.title or asset.date %}
+                                <figcaption>
+                                    {% if asset.date %}
+                                    <span class="img-date">{{ asset.date }}</span>
+                                    {% endif %}
+                                    <span class="img-title">{{ b.caption_override or asset.title or "" }}</span>
+                                </figcaption>
+                                {% endif %}
+                            </figure>
+                            {% endif %}
+                        {% else %}
+                            <p class="text-muted">(Image not found for this block)</p>
+                        {% endif %}
+                        {% endif %}
+
+                    {% endfor %}
+                    {% else %}
+                    <p class="text-muted">No chapter content yet.</p>
+                    {% endif %}
+
+                    {# Find out more topics #}
+                    {% if ch.chapter_topics and ch.chapter_topics|length %}
+                    <div class="chapter-more">
+                        <h3>Find out more</h3>
+                        <ul class="more-links">
+                        {% for ct in (ch.chapter_topics | sort(attribute="sort_order")) %}
+                            <li>
+                            <a href="{{ ct.topic.default_url }}" target="_blank" rel="noopener">
+                                {{ ct.label_override or ct.topic.title }}
+                            </a>
+                            {% if ct.note %}
+                                <div class="more-note">{{ ct.note }}</div>
+                            {% endif %}
+                            </li>
+                        {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+
                 </div>
-            </div>
-
-            <div class="accordion-item">
-                <button class="accordion-header">18th Century</button>
-                <div class="accordion-body">
-                    <p>Placeholder text for 18th century history.</p>
                 </div>
+            {% endfor %}
             </div>
-
-            <div class="accordion-item">
-                <button class="accordion-header">19th Century</button>
-                <div class="accordion-body">
-                    <p>Placeholder text for 19th century history.</p>
-                </div>
-            </div>
-
-            <div class="accordion-item">
-                <button class="accordion-header">20th Century</button>
-                <div class="accordion-body">
-                    <p>Placeholder text for 20th century history.</p>
-                </div>
-            </div>
-
-            <div class="accordion-item">
-                <button class="accordion-header">1916 Rising</button>
-                <div class="accordion-body">
-                    <p>Placeholder text for 1916 rising chapter.</p>
-                </div>
-            </div>
-        </div>
-
+        {% else %}
+            <p>No history chapters yet.</p>
+        {% endif %}
     </section>
+
 
 </div>
 

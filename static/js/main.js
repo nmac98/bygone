@@ -30,17 +30,48 @@ function exists(selector) {
 // ---------------------------------------------------------
 
 document.addEventListener("DOMContentLoaded", () => {
-    const titles = document.querySelectorAll(".accordion-title");
+  const root = document.getElementById("history-accordion");
+  if (!root) return;
 
-    if (titles.length > 0) {
-        titles.forEach(btn => {
-            btn.addEventListener("click", () => {
-                btn.closest(".accordion-item").classList.toggle("open");
-            });
-        });
+  root.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-accordion-btn]");
+    if (!btn) return;
+
+    const panelId = btn.getAttribute("aria-controls");
+    const panel = document.getElementById(panelId);
+    if (!panel) return;
+
+    const isOpen = btn.getAttribute("aria-expanded") === "true";
+
+    // close all (single-open accordion)
+    root.querySelectorAll("[data-accordion-btn]").forEach(b => b.setAttribute("aria-expanded", "false"));
+    root.querySelectorAll("[data-accordion-panel]").forEach(p => p.hidden = true);
+
+    // open selected if it wasn't already open
+    if (!isOpen) {
+      btn.setAttribute("aria-expanded", "true");
+      panel.hidden = false;
     }
+  });
 });
 
+/**
+ * If the URL exists in window.images, open the lightbox at that index.
+ * Otherwise, open the image in a new tab as a fallback.
+ */
+function openLightboxAtUrl(url) {
+  const list = window.images || [];
+  const idx = list.findIndex(i => i.file === url);
+
+  if (idx >= 0) {
+    window.currentIndex = idx;
+    if (typeof openLightbox === "function") openLightbox();
+    return;
+  }
+
+  // fallback
+  window.open(url, "_blank");
+}
 
 
 // ---------------------------------------------------------

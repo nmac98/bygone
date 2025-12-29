@@ -1,20 +1,43 @@
 from flask import render_template, abort, request
 from . import locations_bp
-from models import Location, Route, LocationImage, ImageAsset
-from sqlalchemy.orm import joinedload   
+from models import (
+    Location, Route,
+    LocationImage, ImageAsset,
+    LocationChapter, ChapterBlock, ChapterTopic
+)
+from sqlalchemy.orm import joinedload
+
 
 @locations_bp.route("/gallery/<loc_id>")
 def gallery(loc_id):
 
+    # === CHAPTERS FEATURE: CHANGED ===
+    # Eager-load:
+    # - location.supabase_images -> image -> files (carousel)
+    # - location.chapters -> blocks -> image_asset -> files (chapter images)
+    # - location.chapters -> chapter_topics -> topic (find out more)
     loc = (
         Location.query
         .options(
+            # Existing: carousel images
             joinedload(Location.supabase_images)
-            .joinedload(LocationImage.image)
-            .joinedload(ImageAsset.files)
+                .joinedload(LocationImage.image)
+                .joinedload(ImageAsset.files),
+
+            # New: chapters + blocks + image assets
+            joinedload(Location.chapters)
+                .joinedload(LocationChapter.blocks)
+                .joinedload(ChapterBlock.image_asset)
+                .joinedload(ImageAsset.files),
+
+            # New: chapters + attached topics
+            joinedload(Location.chapters)
+                .joinedload(LocationChapter.chapter_topics)
+                .joinedload(ChapterTopic.topic),
         )
         .get(loc_id)
     )
+
     if not loc:
         abort(404, description="Location not found")
 
@@ -30,7 +53,14 @@ def gallery(loc_id):
     progress = None
 
     if route_id:
-        route = Route.query.get(route_id)
+        # === CHAPTERS FEATURE: CHANGED (perf only) ===
+        # Eager-load stops + their locations to avoid extra queries
+        route = (
+            Route.query
+            .options(joinedload(Route.stops).joinedload("location"))
+            .get(route_id)
+        )
+
         if route:
             stops = sorted(route.stops, key=lambda s: s.order)
             current_index = next(
