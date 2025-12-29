@@ -1,8 +1,15 @@
 from extensions import db
 from datetime import datetime, timezone
+import enum
 
 def utcnow():
     return datetime.now(timezone.utc)
+
+class LocationCategory(enum.Enum):
+    LANDMARK = "LANDMARK"
+    POI = "POI"
+    PUB = "PUB"
+    COFFEE = "COFFEE"
 
 class Location(db.Model):
     __tablename__ = "location"
@@ -20,6 +27,8 @@ class Location(db.Model):
         cascade="all, delete-orphan",
         order_by="LocationChapter.sort_order.asc()",
     )
+
+    category = db.Column(db.Enum(LocationCategory, name="locationcategory"), nullable=False, server_default=LocationCategory.POI.value)
 
     @property
     def supabase_image_assets(self):

@@ -1,7 +1,7 @@
 from flask import render_template, request, url_for, redirect, flash
 from utils.decorators import admin_required
 from . import admin_bp
-from models import Location, Route, RouteStop, ImageAsset, ImageFile, LocationImage, LocationChapter, ChapterBlock, Topic, ChapterTopic
+from models import Location, Route, RouteStop, ImageAsset, ImageFile, LocationImage, LocationChapter, ChapterBlock, Topic, ChapterTopic, LocationCategory
 from extensions import db
 from utils.ids import new_ulid
 from utils.supabase_storage import upload_file_bytes, public_url, SUPABASE_BUCKET, delete_file
@@ -54,13 +54,20 @@ def new_location():
         themes_raw = request.form.get('themes', '')
         themes = [t.strip() for t in themes_raw.split(',') if t.strip()]
 
+        cat_raw = (request.form.get('category') or '').strip()
+        try:
+            category = LocationCategory(cat_raw) if cat_raw else LocationCategory.POI
+        except ValueError:
+            category = LocationCategory.POI
+
         new_loc = Location(
             id=loc_id,
             name=name,
             description=description,
             lat=lat,
             lon=lon,
-            themes=themes
+            themes=themes,
+            category=category
         )
 
         db.session.add(new_loc)
@@ -68,8 +75,9 @@ def new_location():
 
         flash("Location created.", "success")
         return redirect(url_for('admin.admin_locations'))
-
-    return render_template('admin/location_new.html')
+    
+    categories = list(LocationCategory)
+    return render_template('admin/location_new.html', categories=categories, default_category=LocationCategory.POI.value)
 
 @admin_bp.route('/location/<location_id>/edit', methods=['GET', 'POST'])
 @admin_required
@@ -92,14 +100,21 @@ def edit_location(location_id):
         themes = [t.strip() for t in themes_raw.split(',') if t.strip()]
         location.themes = themes
 
+        cat_raw = (request.form.get('category') or '').strip()
+        try:
+            location.category = LocationCategory(cat_raw) if cat_raw else LocationCategory.POI
+        except ValueError:
+            location.category = LocationCategory.POI
+
         db.session.commit()
         flash("Location updated.", "success")
         return redirect(url_for('admin.admin_locations'))   
 
     # Pre-populate themes as comma-separated string
     themes_text = ', '.join(location.themes or [])
+    categories = list(LocationCategory)
 
-    return render_template('admin/edit_location.html', location=location, themes_text=themes_text)
+    return render_template('admin/edit_location.html', location=location, themes_text=themes_text, categories=categories)
 
 # delete location requires detaching any related photos and tour/route stops
 
