@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Admin | Chapters{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+  <h1>Chapters: {{ location.name }}</h1>
+
+  <p>
+    <a class="btn btn-primary"
+       href="{{ url_for('admin.chapter_new', location_id=location.id) }}">
+      Add New Chapter
+    </a>
+    <a class="btn btn-secondary"
+       href="{{ url_for('admin.edit_location', location_id=location.id) }}">
+      Back to Location
+    </a>
+  </p>
+
+  {% if location.chapters %}
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Order</th>
+          <th>Title</th>
+          <th>Summary</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ch in location.chapters %}
+          <tr>
+            <td>{{ ch.sort_order }}</td>
+            <td>{{ ch.title }}</td>
+            <td>{{ (ch.summary or '')[:80] }}{% if ch.summary and ch.summary|length > 80 %}…{% endif %}</td>
+            <td>
+              <a href="{{ url_for('admin.chapter_edit', chapter_id=ch.id) }}">Edit</a>
+              |
+              <form method="POST"
+                    action="{{ url_for('admin.chapter_delete', chapter_id=ch.id) }}"
+                    style="display:inline"
+                    onsubmit="return confirm('Delete this chapter?');">
+                <button type="submit" class="btn btn-link" style="padding:0;">Delete</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No chapters yet for this location.</p>
+  {% endif %}
+</div>
+{% endblock %}

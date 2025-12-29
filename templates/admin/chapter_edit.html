@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% block title %}Admin | Edit Chapter{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+  <h1>Edit Chapter</h1>
+  <p class="text-muted">
+    Location:
+    <a href="{{ url_for('admin.edit_location', location_id=chapter.location.id) }}">
+      {{ chapter.location.name }}
+    </a>
+  </p>
+
+  <!-- Chapter metadata -->
+  <form method="POST">
+    <div class="form-group">
+      <label>Title *</label>
+      <input class="form-control" type="text" name="title" value="{{ chapter.title }}" required>
+    </div>
+
+    <div class="form-group">
+      <label>Summary (optional)</label>
+      <textarea class="form-control" name="summary" rows="4">{{ chapter.summary or '' }}</textarea>
+    </div>
+
+    <div class="form-group">
+      <label>Sort Order</label>
+      <input class="form-control" type="number" name="sort_order" value="{{ chapter.sort_order }}">
+    </div>
+
+    <div style="margin-top: 1rem;">
+      <button class="btn btn-primary" type="submit">Save Changes</button>
+      <a class="btn btn-secondary"
+         href="{{ url_for('admin.chapters_for_location', location_id=chapter.location.id) }}">
+        Back to Chapters
+      </a>
+    </div>
+  </form>
+
+  <hr>
+
+  <!-- Blocks -->
+  <h2>Blocks</h2>
+
+  <p>
+    <a class="btn btn-primary"
+       href="{{ url_for('admin.block_new', chapter_id=chapter.id) }}">
+      Add New Block
+    </a>
+  </p>
+
+  {% if chapter.blocks %}
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Order</th>
+          <th>Type</th>
+          <th>Preview</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in chapter.blocks %}
+          <tr>
+            <td>{{ b.sort_order }}</td>
+            <td>{{ b.block_type }}</td>
+            <td>
+              {% if b.block_type == "text" %}
+                {{ (b.body or '')[:80] }}{% if b.body and b.body|length > 80 %}…{% endif %}
+              {% elif b.block_type == "image" %}
+                {% if b.image_asset %}
+                  {{ b.caption_override or b.image_asset.title or b.image_asset.id }}
+                {% else %}
+                  (no image selected)
+                {% endif %}
+              {% elif b.block_type == "link" %}
+                {{ b.link_label or b.link_url }}
+              {% elif b.block_type == "divider" %}
+                —
+              {% endif %}
+            </td>
+            <td>
+              <form method="POST"
+                    action="{{ url_for('admin.block_delete', block_id=b.id) }}"
+                    style="display:inline"
+                    onsubmit="return confirm('Delete this block?');">
+                <button type="submit" class="btn btn-link" style="padding:0;">Delete</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No blocks yet.</p>
+  {% endif %}
+
+  <hr>
+
+  <!-- Topics ("Find out more") -->
+  <h2>Find out more (Topics)</h2>
+
+  <p class="text-muted">
+    Topics are reusable: create once, attach to multiple chapters.
+    <a href="{{ url_for('admin.topics_list') }}">Manage Topics Library</a>
+  </p>
+
+  <!-- Attach existing topic -->
+  <form method="POST" action="{{ url_for('admin.chapter_topic_attach', chapter_id=chapter.id) }}">
+    <div class="form-group">
+      <label>Attach Topic</label>
+      <select class="form-control" name="topic_id" required>
+        <option value="">-- Choose a topic --</option>
+        {% for t in topics %}
+          <option value="{{ t.id }}">{{ t.title }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Sort Order</label>
+      <input class="form-control" type="number" name="sort_order" value="0">
+    </div>
+
+    <div class="form-group">
+      <label>Label Override (optional)</label>
+      <input class="form-control" type="text" name="label_override"
+             placeholder="Find out more about …">
+    </div>
+
+    <div class="form-group">
+      <label>Note (optional)</label>
+      <input class="form-control" type="text" name="note"
+             placeholder="Why this topic matters here…">
+    </div>
+
+    <button class="btn btn-primary" type="submit">Attach Topic</button>
+  </form>
+
+  <br>
+
+  <!-- Attached topics list -->
+  {% if chapter.chapter_topics %}
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Order</th>
+          <th>Link Text</th>
+          <th>URL</th>
+          <th>Note</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ct in chapter.chapter_topics %}
+          <tr>
+            <td>{{ ct.sort_order }}</td>
+            <td>{{ ct.label_override or ct.topic.title }}</td>
+            <td>
+              <a href="{{ ct.topic.default_url }}" target="_blank" rel="noopener">
+                {{ ct.topic.default_url }}
+              </a>
+            </td>
+            <td>{{ ct.note or '—' }}</td>
+            <td>
+              <form method="POST"
+                    action="{{ url_for('admin.chapter_topic_delete', ct_id=ct.id) }}"
+                    style="display:inline"
+                    onsubmit="return confirm('Remove this topic from the chapter?');">
+                <button type="submit" class="btn btn-link" style="padding:0;">Remove</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No topics attached yet.</p>
+  {% endif %}
+
+  <hr>
+
+  <!-- Delete chapter -->
+  <form method="POST"
+        action="{{ url_for('admin.chapter_delete', chapter_id=chapter.id) }}"
+        onsubmit="return confirm('Delete this entire chapter? This will remove its blocks and topic links.');">
+    <button class="btn btn-danger" type="submit">Delete Chapter</button>
+  </form>
+
+</div>
+{% endblock %}

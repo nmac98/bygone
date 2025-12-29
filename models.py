@@ -80,7 +80,7 @@ class LocationChapter(db.Model):
     __tablename__ = "location_chapter"
 
     id = db.Column(db.Integer, primary_key=True)
-    location_id = db.Column(db.Integer, db.ForeignKey("location.id"), nullable=False)
+    location_id = db.Column(db.String, db.ForeignKey("location.id"), nullable=False)
 
     title = db.Column(db.String(200), nullable=False)
     summary = db.Column(db.Text, nullable=True)
@@ -104,7 +104,6 @@ class LocationChapter(db.Model):
         order_by="ChapterTopic.sort_order.asc()",
     )
 
-
 class ChapterBlock(db.Model):
     """
     Flexible ordered content inside a chapter.
@@ -123,7 +122,7 @@ class ChapterBlock(db.Model):
 
     # image (store a reference to your existing image/asset table)
     # IMPORTANT: change "image_asset" to whatever your actual image model table is.
-    image_asset_id = db.Column(db.Integer, db.ForeignKey("image_asset.id"), nullable=True)
+    image_asset_id = db.Column(db.String(26), db.ForeignKey("images.id"), nullable=True)
     caption_override = db.Column(db.String(255), nullable=True)
 
     # link

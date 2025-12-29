@@ -38,6 +38,8 @@
             <td>
               <a href="{{ url_for('admin.edit_location', location_id=loc.id) }}">Edit</a>
               <a href="{{ url_for('admin.delete_location', location_id=loc.id) }}">Delete</a>
+              <a href="{{ url_for('admin.chapters_for_location', location_id=loc.id) }}">Chapters</a>
+
               <!-- Later you could add: | <a href="...">Photos</a> -->
             </td>
           </tr>

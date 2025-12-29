@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Admin | New Block{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+  <h1>New Block</h1>
+  <p class="text-muted">
+    Chapter: <strong>{{ chapter.title }}</strong>
+    (Location: {{ chapter.location.name }})
+  </p>
+
+  <form method="POST">
+    <div class="form-group">
+      <label>Block Type *</label>
+      <select class="form-control" name="block_type" required>
+        <option value="text">text</option>
+        <option value="image">image</option>
+        <option value="link">link</option>
+        <option value="divider">divider</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Sort Order</label>
+      <input class="form-control" type="number" name="sort_order" value="0">
+      <small class="text-muted">Lower numbers appear first inside the chapter.</small>
+    </div>
+
+    <hr>
+
+    <h3>Text</h3>
+    <div class="form-group">
+      <label>Body</label>
+      <textarea class="form-control" name="body" rows="6"
+                placeholder="Text shown in the chapter..."></textarea>
+    </div>
+
+    <hr>
+
+    <h3>Image</h3>
+    <div class="form-group">
+      <label>Choose Image (optional for other block types)</label>
+      <select class="form-control" name="image_asset_id">
+        <option value="">-- none --</option>
+        {% for img in images %}
+          <option value="{{ img.id }}">
+            {{ img.title or '(untitled)' }} — {{ img.id }}
+          </option>
+        {% endfor %}
+      </select>
+      <small class="text-muted">You can search/pick better later; this is a starter picker.</small>
+    </div>
+
+    <div class="form-group">
+      <label>Caption override (optional)</label>
+      <input class="form-control" type="text" name="caption_override"
+             placeholder="If blank, will use image title.">
+    </div>
+
+    <hr>
+
+    <h3>Link</h3>
+    <div class="form-group">
+      <label>Link Label</label>
+      <input class="form-control" type="text" name="link_label" placeholder="Read more...">
+    </div>
+
+    <div class="form-group">
+      <label>Link URL</label>
+      <input class="form-control" type="text" name="link_url" placeholder="https://...">
+    </div>
+
+    <div class="form-group">
+      <label>Link Note (optional)</label>
+      <input class="form-control" type="text" name="link_note" placeholder="Short context for the link...">
+    </div>
+
+    <div style="margin-top: 1rem;">
+      <button class="btn btn-primary" type="submit">Create Block</button>
+      <a class="btn btn-secondary"
+         href="{{ url_for('admin.chapter_edit', chapter_id=chapter.id) }}">
+        Cancel
+      </a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,7 +1,7 @@
 from flask import render_template, request, url_for, redirect, flash
 from utils.decorators import admin_required
 from . import admin_bp
-from models import Location, Route, RouteStop, ImageAsset, ImageFile, LocationImage
+from models import Location, Route, RouteStop, ImageAsset, ImageFile, LocationImage, LocationChapter, ChapterBlock, Topic, ChapterTopic
 from extensions import db
 from utils.ids import new_ulid
 from utils.supabase_storage import upload_file_bytes, public_url, SUPABASE_BUCKET, delete_file
@@ -129,10 +129,13 @@ def delete_location(location_id):
                 "You can only remove a location when it is removed from all tour routes.",
                 "error"
             )
-            return redirect(url_for('admin_bp.delete_location', location_id=location_id))
+            return redirect(url_for('admin.delete_location', location_id=location_id))
 
         # Detach all linked images (delete join rows)
         LocationImage.query.filter_by(location_id=location_id).delete(synchronize_session=False)
+
+        #detach chapters 
+        LocationChapter.query.filter_by(location_id=location_id).delete(synchronize_session=False)
 
         # Now delete the location
         db.session.delete(location)
@@ -581,3 +584,254 @@ def images_delete(image_id):
     flash("Image and associated files deleted.", "success")
     return redirect(url_for("admin.images_list"))
 
+# ==========================================================
+# === CHAPTERS FEATURE: NEW ROUTES BELOW ====================
+# ==========================================================
+
+@admin_bp.route("/location/<location_id>/chapters")
+@admin_required
+def chapters_for_location(location_id):
+    """
+    List chapters for a location.
+    """
+    location = Location.query.options(
+        joinedload(Location.chapters)
+    ).get_or_404(location_id)
+
+    return render_template("admin/chapters_list.html", location=location)
+
+
+@admin_bp.route("/location/<location_id>/chapters/new", methods=["GET", "POST"])
+@admin_required
+def chapter_new(location_id):
+    """
+    Create a new chapter for a location.
+    """
+    location = Location.query.get_or_404(location_id)
+
+    if request.method == "POST":
+        title = (request.form.get("title") or "").strip()
+        summary = (request.form.get("summary") or "").strip() or None
+        sort_order = int(request.form.get("sort_order") or 0)
+
+        if not title:
+            flash("Title is required.", "error")
+            return redirect(request.url)
+
+        ch = LocationChapter(
+            location_id=location.id,
+            title=title,
+            summary=summary,
+            sort_order=sort_order,
+        )
+        db.session.add(ch)
+        db.session.commit()
+
+        flash("Chapter created.", "success")
+        return redirect(url_for("admin.chapter_edit", chapter_id=ch.id))
+
+    return render_template("admin/chapter_new.html", location=location)
+
+
+@admin_bp.route("/chapters/<int:chapter_id>/edit", methods=["GET", "POST"])
+@admin_required
+def chapter_edit(chapter_id):
+    """
+    Edit chapter metadata, manage blocks, and manage 'find out more' topic links.
+    """
+    chapter = LocationChapter.query.options(
+        joinedload(LocationChapter.blocks).joinedload(ChapterBlock.image_asset),
+        joinedload(LocationChapter.chapter_topics).joinedload(ChapterTopic.topic),
+        joinedload(LocationChapter.location),
+    ).get_or_404(chapter_id)
+
+    if request.method == "POST":
+        chapter.title = (request.form.get("title") or "").strip()
+        chapter.summary = (request.form.get("summary") or "").strip() or None
+        chapter.sort_order = int(request.form.get("sort_order") or 0)
+
+        if not chapter.title:
+            flash("Title is required.", "error")
+            return redirect(request.url)
+
+        db.session.commit()
+        flash("Chapter updated.", "success")
+        return redirect(url_for("admin.chapter_edit", chapter_id=chapter.id))
+
+    # Topics library for attach dropdown
+    topics = Topic.query.order_by(Topic.title.asc()).all()
+
+    # Images for block creation dropdown (optional but useful)
+    images = ImageAsset.query.order_by(ImageAsset.created_at.desc()).limit(300).all()
+
+    return render_template(
+        "admin/chapter_edit.html",
+        chapter=chapter,
+        topics=topics,
+        images=images,
+    )
+
+
+@admin_bp.route("/chapters/<int:chapter_id>/delete", methods=["POST"])
+@admin_required
+def chapter_delete(chapter_id):
+    chapter = LocationChapter.query.get_or_404(chapter_id)
+    location_id = chapter.location_id
+    db.session.delete(chapter)
+    db.session.commit()
+    flash("Chapter deleted.", "success")
+    return redirect(url_for("admin.chapters_for_location", location_id=location_id))
+
+
+# -----------------------
+# Blocks
+# -----------------------
+@admin_bp.route("/chapters/<int:chapter_id>/blocks/new", methods=["GET", "POST"])
+@admin_required
+def block_new(chapter_id):
+    chapter = LocationChapter.query.options(joinedload(LocationChapter.location)).get_or_404(chapter_id)
+    images = ImageAsset.query.order_by(ImageAsset.created_at.desc()).limit(300).all()
+
+    if request.method == "POST":
+        block_type = (request.form.get("block_type") or "").strip()
+        sort_order = int(request.form.get("sort_order") or 0)
+
+        b = ChapterBlock(
+            chapter_id=chapter.id,
+            block_type=block_type,
+            sort_order=sort_order,
+            body=(request.form.get("body") or "").strip() or None,
+            caption_override=(request.form.get("caption_override") or "").strip() or None,
+            link_label=(request.form.get("link_label") or "").strip() or None,
+            link_url=(request.form.get("link_url") or "").strip() or None,
+            link_note=(request.form.get("link_note") or "").strip() or None,
+        )
+
+        image_id = (request.form.get("image_asset_id") or "").strip()
+        if image_id:
+            b.image_asset_id = image_id
+
+        # light validation per type
+        if block_type == "text" and not b.body:
+            flash("Text block requires content.", "error")
+            return redirect(request.url)
+
+        if block_type == "link" and not b.link_url:
+            flash("Link block requires a URL.", "error")
+            return redirect(request.url)
+
+        if block_type == "image" and not b.image_asset_id:
+            flash("Image block requires an image selection.", "error")
+            return redirect(request.url)
+
+        if block_type not in ("text", "image", "link", "divider"):
+            flash("Invalid block type.", "error")
+            return redirect(request.url)
+
+        db.session.add(b)
+        db.session.commit()
+        flash("Block created.", "success")
+        return redirect(url_for("admin.chapter_edit", chapter_id=chapter.id))
+
+    return render_template("admin/block_new.html", chapter=chapter, images=images)
+
+
+@admin_bp.route("/blocks/<int:block_id>/delete", methods=["POST"])
+@admin_required
+def block_delete(block_id):
+    b = ChapterBlock.query.get_or_404(block_id)
+    chapter_id = b.chapter_id
+    db.session.delete(b)
+    db.session.commit()
+    flash("Block deleted.", "success")
+    return redirect(url_for("admin.chapter_edit", chapter_id=chapter_id))
+
+
+# -----------------------
+# Topics library
+# -----------------------
+@admin_bp.route("/topics")
+@admin_required
+def topics_list():
+    topics = Topic.query.order_by(Topic.title.asc()).all()
+    return render_template("admin/topics_list.html", topics=topics)
+
+
+@admin_bp.route("/topics/new", methods=["GET", "POST"])
+@admin_required
+def topic_new():
+    if request.method == "POST":
+        slug = (request.form.get("slug") or "").strip()
+        title = (request.form.get("title") or "").strip()
+        summary = (request.form.get("summary") or "").strip() or None
+        default_url = (request.form.get("default_url") or "").strip()
+
+        if not slug or not title or not default_url:
+            flash("Slug, title, and default URL are required.", "error")
+            return redirect(request.url)
+
+        # prevent duplicate slug
+        if Topic.query.filter_by(slug=slug).first():
+            flash("That slug already exists.", "error")
+            return redirect(request.url)
+
+        t = Topic(slug=slug, title=title, summary=summary, default_url=default_url)
+        db.session.add(t)
+        db.session.commit()
+        flash("Topic created.", "success")
+        return redirect(url_for("admin.topics_list"))
+
+    return render_template("admin/topic_new.html")
+
+
+@admin_bp.route("/topics/<int:topic_id>/delete", methods=["POST"])
+@admin_required
+def topic_delete(topic_id):
+    t = Topic.query.get_or_404(topic_id)
+    db.session.delete(t)
+    db.session.commit()
+    flash("Topic deleted.", "success")
+    return redirect(url_for("admin.topics_list"))
+
+
+# -----------------------
+# Attach / detach topics to chapter
+# -----------------------
+@admin_bp.route("/chapters/<int:chapter_id>/topics/attach", methods=["POST"])
+@admin_required
+def chapter_topic_attach(chapter_id):
+    chapter = LocationChapter.query.get_or_404(chapter_id)
+
+    topic_id = request.form.get("topic_id")
+    if not topic_id:
+        flash("Pick a topic.", "error")
+        return redirect(url_for("admin.chapter_edit", chapter_id=chapter.id))
+
+    # prevent duplicates
+    existing = ChapterTopic.query.filter_by(chapter_id=chapter.id, topic_id=int(topic_id)).first()
+    if existing:
+        flash("That topic is already attached to this chapter.", "error")
+        return redirect(url_for("admin.chapter_edit", chapter_id=chapter.id))
+
+    ct = ChapterTopic(
+        chapter_id=chapter.id,
+        topic_id=int(topic_id),
+        sort_order=int(request.form.get("sort_order") or 0),
+        label_override=(request.form.get("label_override") or "").strip() or None,
+        note=(request.form.get("note") or "").strip() or None,
+    )
+    db.session.add(ct)
+    db.session.commit()
+    flash("Topic attached.", "success")
+    return redirect(url_for("admin.chapter_edit", chapter_id=chapter.id))
+
+
+@admin_bp.route("/chapter-topics/<int:ct_id>/delete", methods=["POST"])
+@admin_required
+def chapter_topic_delete(ct_id):
+    ct = ChapterTopic.query.get_or_404(ct_id)
+    chapter_id = ct.chapter_id
+    db.session.delete(ct)
+    db.session.commit()
+    flash("Topic removed.", "success")
+    return redirect(url_for("admin.chapter_edit", chapter_id=chapter_id))

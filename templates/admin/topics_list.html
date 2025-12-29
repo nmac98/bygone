@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Admin | Topics{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+  <h1>Topics Library</h1>
+
+  <p>
+    <a class="btn btn-primary" href="{{ url_for('admin.topic_new') }}">Add New Topic</a>
+    <a class="btn btn-secondary" href="{{ url_for('admin.dashboard') }}">Back to Dashboard</a>
+  </p>
+
+  {% if topics %}
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Slug</th>
+          <th>URL</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in topics %}
+          <tr>
+            <td>{{ t.title }}</td>
+            <td>{{ t.slug }}</td>
+            <td>
+              <a href="{{ t.default_url }}" target="_blank" rel="noopener">
+                {{ t.default_url }}
+              </a>
+            </td>
+            <td>
+              <form method="POST"
+                    action="{{ url_for('admin.topic_delete', topic_id=t.id) }}"
+                    style="display:inline"
+                    onsubmit="return confirm('Delete this topic? It will be removed from any chapters using it.');">
+                <button type="submit" class="btn btn-link" style="padding:0;">Delete</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No topics yet.</p>
+  {% endif %}
+</div>
+{% endblock %}
