@@ -1,7 +1,7 @@
 from flask import render_template, abort, request
 from . import locations_bp
 from models import (
-    Location, Route,
+    Location, Route, RouteStop,
     LocationImage, ImageAsset,
     LocationChapter, ChapterBlock, ChapterTopic
 )
@@ -57,7 +57,7 @@ def gallery(loc_id):
         # Eager-load stops + their locations to avoid extra queries
         route = (
             Route.query
-            .options(joinedload(Route.stops).joinedload("location"))
+            .options(joinedload(Route.stops).joinedload(RouteStop.location))
             .get(route_id)
         )
 
