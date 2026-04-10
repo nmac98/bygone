@@ -1,4 +1,5 @@
-from flask import render_template, request, url_for, redirect, flash
+import os
+from flask import render_template, request, url_for, redirect, flash, current_app
 from utils.decorators import admin_required
 from . import admin_bp
 from models import Location, Route, RouteStop, ImageAsset, ImageFile, LocationImage, LocationChapter, ChapterBlock, Topic, ChapterTopic, LocationCategory
@@ -15,6 +16,13 @@ ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg"}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
+
+def get_static_images():
+    images_dir = os.path.join(current_app.static_folder, 'images')
+    return sorted([
+        f for f in os.listdir(images_dir)
+        if f.rsplit('.', 1)[-1].lower() in ALLOWED_IMAGE_EXTENSIONS
+    ])
 
 @admin_bp.route('/')
 @admin_required
@@ -200,7 +208,7 @@ def new_route():
         flash("Route created.", "success")
         return redirect(url_for('admin.admin_routes'))
 
-    return render_template('admin/route_new.html')
+    return render_template('admin/route_new.html', images=get_static_images())
 
 @admin_bp.route('/route/<route_id>/edit', methods=['GET', 'POST'])
 @admin_required
@@ -216,7 +224,7 @@ def edit_route(route_id):
         flash("Route updated.", "success")
         return redirect(url_for('admin.admin_routes'))
 
-    return render_template('admin/route_edit.html', route=route)
+    return render_template('admin/route_edit.html', route=route, images=get_static_images())
 
 @admin_bp.route('/route/<route_id>/delete', methods=['GET', 'POST'])
 @admin_required

@@ -150,6 +150,58 @@ html, body {
 }
 
 /* ===========================
+   ADMIN IMAGE PICKER
+   =========================== */
+
+.image-picker {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+    margin: 10px 0;
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 4px;
+}
+
+.image-picker-item {
+    cursor: pointer;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 3px solid transparent;
+    transition: border-color 0.15s ease;
+    background: #111;
+}
+
+.image-picker-item img {
+    width: 100%;
+    height: 80px;
+    object-fit: cover;
+    display: block;
+}
+
+.image-picker-item span {
+    display: block;
+    font-size: 0.65rem;
+    color: #aaa;
+    padding: 4px 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.image-picker-item:hover {
+    border-color: #555;
+}
+
+.image-picker-item.selected {
+    border-color: #007bff;
+}
+
+.image-picker-item.selected span {
+    color: #fff;
+}
+
+/* ===========================
    LANDING PAGE
    =========================== */
 
