@@ -3,9 +3,120 @@
 {% block title %}BYGONE | Plaques{% endblock %}
 
 {% block content %}
-<div class="plaques-container">
-    <h1 class="page-title">Plaques</h1>
+<div class="plaques-page">
 
-    <p class="empty-state">No plaques available yet.</p>
+  <!-- Camera prompt -->
+  <div id="plaques-prompt" class="plaques-prompt">
+    <div class="plaques-icon">🏛</div>
+    <h2 class="plaques-title">Scan a Plaque</h2>
+    <p class="plaques-instruction">Take a photo of any historical plaque to learn about the person or event it commemorates.</p>
+    <label for="plaque-input" class="sheet-btn plaques-camera-btn">
+      Take Photo
+    </label>
+    <input type="file" id="plaque-input" accept="image/*" capture="environment" style="display:none;">
+  </div>
+
+  <!-- Loading state -->
+  <div id="plaques-loading" class="plaques-loading">
+    <div class="plaques-spinner"></div>
+    <p class="plaques-loading-text">Analysing plaque...</p>
+  </div>
+
+  <!-- Error state -->
+  <div id="plaques-error" class="plaques-error">
+    <p id="plaques-error-msg" class="plaques-error-msg"></p>
+    <button class="sheet-btn" onclick="resetPlaques()">Try Again</button>
+  </div>
+
 </div>
+
+<!-- Result sheet (reuses map sheet styles) -->
+<div id="plaque-sheet" class="location-sheet">
+  <div class="sheet-drag-handle"></div>
+  <div class="sheet-inner">
+    <div id="plaque-image-wrap" class="sheet-image-wrap">
+      <img id="plaque-sheet-img" class="sheet-img" src="" alt="">
+    </div>
+    <div class="sheet-body">
+      <h2 id="plaque-sheet-name" class="sheet-name"></h2>
+      <p id="plaque-sheet-summary" class="sheet-description sheet-description--full"></p>
+      <div class="sheet-actions">
+        <button class="sheet-btn" onclick="resetPlaques()">Scan another</button>
+      </div>
+    </div>
+    <button class="sheet-close" onclick="closePlaqueSheet()" aria-label="Close">✕</button>
+  </div>
+</div>
+<div id="plaque-backdrop" class="sheet-backdrop" onclick="closePlaqueSheet()"></div>
+
+<script>
+  const input = document.getElementById('plaque-input');
+
+  input.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    showLoading();
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const res = await fetch('/plaques/analyze', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await res.json();
+
+      if (data.error) {
+        showError(data.error);
+      } else {
+        showResult(file, data);
+      }
+    } catch (err) {
+      showError('Something went wrong. Please try again.');
+    }
+  });
+
+  function showLoading() {
+    document.getElementById('plaques-prompt').classList.remove('active');
+    document.getElementById('plaques-loading').classList.add('active');
+    document.getElementById('plaques-error').classList.remove('active');
+  }
+
+  function showError(msg) {
+    document.getElementById('plaques-loading').classList.remove('active');
+    document.getElementById('plaques-prompt').classList.remove('active');
+    document.getElementById('plaques-error').classList.add('active');
+    document.getElementById('plaques-error-msg').textContent = msg;
+  }
+
+  function showResult(file, data) {
+    document.getElementById('plaques-loading').classList.remove('active');
+    document.getElementById('plaques-prompt').classList.add('active');
+
+    document.getElementById('plaque-sheet-img').src = URL.createObjectURL(file);
+    document.getElementById('plaque-sheet-name').textContent = data.name || '';
+    document.getElementById('plaque-sheet-summary').textContent = data.summary || '';
+
+    document.getElementById('plaque-sheet').classList.add('active');
+    document.getElementById('plaque-backdrop').classList.add('active');
+  }
+
+  function closePlaqueSheet() {
+    document.getElementById('plaque-sheet').classList.remove('active');
+    document.getElementById('plaque-backdrop').classList.remove('active');
+  }
+
+  function resetPlaques() {
+    closePlaqueSheet();
+    document.getElementById('plaques-error').classList.remove('active');
+    document.getElementById('plaques-prompt').classList.add('active');
+    document.getElementById('plaque-input').value = '';
+  }
+
+  // Show prompt on load
+  document.getElementById('plaques-prompt').classList.add('active');
+</script>
 {% endblock %}

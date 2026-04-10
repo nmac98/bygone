@@ -1,4 +1,10 @@
-from flask import render_template
+import os
+import base64
+import json
+import re
+
+import anthropic
+from flask import render_template, request, jsonify
 from . import main_bp
 from models import Location, Route, LocationImage, ImageAsset
 
@@ -77,3 +83,60 @@ def tours():
 @main_bp.route("/plaques")
 def plaques():
     return render_template("pages/plaques.html")
+
+
+@main_bp.route("/plaques/analyze", methods=["POST"])
+def analyze_plaque():
+    file = request.files.get("image")
+    if not file:
+        return jsonify({"error": "No image provided."}), 400
+
+    image_data = base64.standard_b64encode(file.read()).decode("utf-8")
+    media_type = file.content_type or "image/jpeg"
+
+    client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
+    message = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=600,
+        messages=[{
+            "role": "user",
+            "content": [
+                {
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": media_type,
+                        "data": image_data,
+                    },
+                },
+                {
+                    "type": "text",
+                    "text": (
+                        "This is a photo of a historical plaque, likely found on a building or monument in Dublin, Ireland. "
+                        "Identify who or what is commemorated and provide a concise historical summary. "
+                        "Respond with a JSON object only, no markdown:\n"
+                        "{\"name\": \"Name of person or event\", \"summary\": \"2-3 sentence historical summary\"}\n"
+                        "If you cannot identify a plaque or read its text clearly, respond with:\n"
+                        "{\"error\": \"Could not read the plaque clearly. Please try again with a closer, clearer photo.\"}"
+                    )
+                }
+            ],
+        }]
+    )
+
+    response_text = message.content[0].text.strip()
+
+    try:
+        result = json.loads(response_text)
+    except json.JSONDecodeError:
+        match = re.search(r'\{.*\}', response_text, re.DOTALL)
+        if match:
+            try:
+                result = json.loads(match.group())
+            except Exception:
+                result = {"name": "Historical Plaque", "summary": response_text}
+        else:
+            result = {"name": "Historical Plaque", "summary": response_text}
+
+    return jsonify(result)
