@@ -6,6 +6,11 @@ from sqlalchemy.orm import joinedload
 
 @main_bp.route("/")
 def index():
+    return render_template("pages/index.html")
+
+
+@main_bp.route("/explore")
+def explore():
     locations = (
         Location.query
         .options(
@@ -15,7 +20,6 @@ def index():
         )
         .all()
     )
-    routes = Route.query.all()
 
     photos_q = (
         ImageAsset.query
@@ -34,10 +38,9 @@ def index():
             "lon": p.lon,
             "url": original.public_url if original else None,
             "date": p.date,
-            "description": p.description,  
+            "description": p.description,
         })
 
-    # Location popup data: choose the first linked image by sort_order (if any)
     location_data = []
     for loc in locations:
         li_sorted = sorted(loc.supabase_images, key=lambda x: x.sort_order or 0)
@@ -55,12 +58,22 @@ def index():
             "lat": loc.lat,
             "lon": loc.lon,
             "description": loc.description,
-            "main_image_url": main_image_url,  # <-- NEW
+            "main_image_url": main_image_url,
         })
 
     return render_template(
-        "pages/index.html",
+        "pages/explore.html",
         locations=location_data,
         photos=photos,
-        routes=routes,
     )
+
+
+@main_bp.route("/tours")
+def tours():
+    routes = Route.query.all()
+    return render_template("pages/tours.html", routes=routes)
+
+
+@main_bp.route("/plaques")
+def plaques():
+    return render_template("pages/plaques.html")

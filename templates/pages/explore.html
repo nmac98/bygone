@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}BYGONE | Explore{% endblock %}
+
+{% block content %}
+<div class="index-container">
+  <div class="map-column">
+      <div class="map-wrapper">
+          <div id="map"></div>
+      </div>
+  </div>
+</div>
+
+<script>
+  const locations = {{ locations | tojson | safe }};
+  const photos = {{ photos | tojson | safe }};
+
+  const photosById = {};
+  (photos || []).forEach(p => {
+    if (p && p.id) photosById[String(p.id)] = p;
+  });
+
+  const defaultLat = 53.3498;
+  const defaultLon = -6.2603;
+
+  const map = L.map("map").setView([defaultLat, defaultLon], 14);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  const markers = [];
+
+  locations.forEach(loc => {
+    if (loc.lat == null || loc.lon == null) return;
+
+    const marker = L.marker([loc.lat, loc.lon]).addTo(map);
+
+    const imgHtml = loc.main_image_url
+      ? `<img src="${loc.main_image_url}" width="200"><br>`
+      : "";
+
+    const popupHtml = `
+      <b>${loc.name}</b><br>
+      ${imgHtml}
+      <a href="/gallery/${loc.id}" target="_blank">See more photos</a>
+    `;
+
+    marker.bindPopup(popupHtml);
+    markers.push(marker);
+  });
+
+  photos.forEach(photo => {
+    if (photo.lat == null || photo.lon == null) return;
+
+    const icon = L.icon({
+      iconUrl: "/static/icons/photo-marker-black.png",
+      iconSize: [14, 14],
+      iconAnchor: [7, 7]
+    });
+
+    const marker = L.marker([photo.lat, photo.lon], { icon }).addTo(map);
+
+    const photoImg = photo.url
+      ? `<img
+            src="${photo.url}"
+            width="180"
+            style="cursor:pointer; display:block;"
+            class="js-map-lightbox"
+            data-photo-id="${photo.id}"
+        ><br>`
+      : "";
+
+    const popupHtml = `
+      <b>${photo.title || "Untitled"}</b><br>
+      ${photoImg}
+      <small>Click Image to Enlarge</small>
+    `;
+
+    marker.bindPopup(popupHtml);
+    markers.push(marker);
+  });
+
+  if (markers.length > 0) {
+    const group = L.featureGroup(markers);
+    map.fitBounds(group.getBounds().pad(0.2));
+  }
+
+  map.on("popupopen", (e) => {
+    const popupEl = e.popup.getElement();
+    if (!popupEl) return;
+
+    popupEl.querySelectorAll(".js-map-lightbox").forEach(img => {
+      img.addEventListener("click", (evt) => {
+        evt.preventDefault();
+        evt.stopPropagation();
+
+        const photoId = img.dataset.photoId;
+        const photo = photosById[String(photoId)];
+        if (!photo) return;
+
+        openMapLightbox(photo);
+      });
+    });
+  });
+
+  function openMapLightbox(photo) {
+    const lb = document.getElementById("map-lightbox");
+    const img = document.getElementById("map-lightbox-img");
+    const cap = document.getElementById("map-caption");
+    const capDate = document.getElementById("map-caption-date");
+    const capTitle = document.getElementById("map-caption-title");
+    const capDesc = document.getElementById("map-caption-desc");
+    const capBtn = document.getElementById("map-caption-info-btn");
+
+    if (!lb || !img || !cap || !capDate || !capTitle || !capDesc || !capBtn) return;
+
+    img.src = photo.url;
+    img.alt = photo.title || "";
+
+    capDate.textContent = photo.date || "";
+    capTitle.textContent = photo.title || "";
+    capDesc.textContent = photo.description || "";
+
+    cap.classList.add("collapsed");
+    cap.classList.remove("expanded");
+
+    const hasDesc = (photo.description || "").trim().length > 0;
+    capBtn.style.display = hasDesc ? "inline-block" : "none";
+    capBtn.textContent = "ⓘ";
+
+    lb.style.display = "flex";
+    document.body.style.overflow = "hidden";
+  }
+
+  function toggleMapCaption(e) {
+    if (e) e.stopPropagation();
+
+    const cap = document.getElementById("map-caption");
+    const btn = document.getElementById("map-caption-info-btn");
+    if (!cap || !btn) return;
+
+    const willExpand = cap.classList.contains("collapsed");
+    cap.classList.toggle("collapsed", !willExpand);
+    cap.classList.toggle("expanded", willExpand);
+
+    btn.textContent = willExpand ? "✕" : "ⓘ";
+  }
+
+  function closeMapLightbox(e) {
+    if (e) e.stopPropagation();
+
+    const lb = document.getElementById("map-lightbox");
+    const img = document.getElementById("map-lightbox-img");
+    const cap = document.getElementById("map-caption");
+    const btn = document.getElementById("map-caption-info-btn");
+
+    if (img) img.src = "";
+    if (lb) lb.style.display = "none";
+
+    if (cap) {
+      cap.classList.add("collapsed");
+      cap.classList.remove("expanded");
+    }
+    if (btn) btn.textContent = "ⓘ";
+
+    document.body.style.overflow = "";
+  }
+</script>
+
+<div id="map-lightbox" class="lightbox" onclick="closeMapLightbox(event)">
+  <img id="map-lightbox-img" class="lightbox-img" />
+  <button class="lightbox-close" onclick="closeMapLightbox(event)" aria-label="Close">✕</button>
+
+  <div class="lightbox-caption collapsed" id="map-caption" onclick="event.stopPropagation()">
+    <div class="caption-header">
+      <span class="caption-date" id="map-caption-date"></span>
+      <span class="caption-title" id="map-caption-title"></span>
+
+      <button
+        class="caption-info-btn"
+        id="map-caption-info-btn"
+        type="button"
+        onclick="toggleMapCaption(event)"
+        aria-label="Photo information"
+        style="display:none;"
+      >ⓘ</button>
+    </div>
+
+    <div class="caption-description" id="map-caption-desc"></div>
+  </div>
+</div>
+
+{% endblock %}

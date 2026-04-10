@@ -41,12 +41,16 @@
 
     <header class="main-header">
         <a href="{{ url_for('main.index') }}">
-            <img src="{{ url_for('static', filename='images/logo_large.png') }}" 
-                 alt="BYGONE Logo" 
+            <img src="{{ url_for('static', filename='images/logo_large.png') }}"
+                 alt="BYGONE Logo"
                  class="logo">
         </a>
 
-        <a class="return-link" href="{{ url_for('main.index') }}">Return to Map</a>
+        <nav class="main-nav">
+            <a class="nav-link {% if request.endpoint == 'main.explore' %}active{% endif %}" href="{{ url_for('main.explore') }}">Explore</a>
+            <a class="nav-link {% if request.endpoint == 'main.tours' %}active{% endif %}" href="{{ url_for('main.tours') }}">Tours</a>
+            <a class="nav-link {% if request.endpoint == 'main.plaques' %}active{% endif %}" href="{{ url_for('main.plaques') }}">Plaques</a>
+        </nav>
     </header>
 
     <main>

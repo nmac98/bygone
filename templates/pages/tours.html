@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}BYGONE | Tours{% endblock %}
+
+{% block content %}
+<div class="tours-container">
+    <h1 class="page-title">Tours</h1>
+
+    <ul class="routes-list">
+        {% for route in routes %}
+        <li>
+            <a class="routes-btn" href="{{ url_for('routes_app.view_route', route_name=route.name) }}">
+                {{ route.name }}
+            </a>
+        </li>
+        {% else %}
+        <li class="empty-state">No tours available yet.</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}

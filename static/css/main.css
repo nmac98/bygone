@@ -11,7 +11,7 @@ h1, h2 {
 }
 
 main {
-    padding-top: 0.5rem;      /* breathing room under the banner */
+    padding-top: 0;
 }
 
 html, body {
@@ -104,20 +104,132 @@ html, body {
     z-index: 1000;
 }
 
-.main-header a {
-    color: rgb(248, 246, 246);
-    text-decoration: none;
-    font-weight: bold;
-}
-
-.main-header a:hover {
-    text-decoration: underline;
-}
-
 .main-header .logo {
     height: 30px;
     width: auto;
     object-fit: contain;
+}
+
+.main-nav {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.main-nav .nav-link {
+    color: #ccc;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.main-nav .nav-link:hover {
+    color: #fff;
+    border-color: #444;
+}
+
+.main-nav .nav-link.active {
+    color: #fff;
+    border-color: #555;
+    background: #222;
+}
+
+/* ===========================
+   LANDING PAGE
+   =========================== */
+
+.landing-hero {
+    position: relative;
+    height: calc(100vh - 60px);
+    background: url('/static/images/dame street towards trinity 1890.jpg') center center / cover no-repeat;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+}
+
+.hero-content {
+    position: relative;
+    z-index: 1;
+    padding: 0 20px;
+}
+
+.hero-logo {
+    height: 80px;
+    width: auto;
+    object-fit: contain;
+    margin-bottom: 16px;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.hero-tagline {
+    font-size: 1.15rem;
+    color: #ddd;
+    margin-bottom: 36px;
+    letter-spacing: 0.04em;
+}
+
+.hero-cta {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.cta-btn {
+    padding: 12px 28px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 1rem;
+    font-weight: 500;
+    border: 1px solid #fff;
+    color: #fff;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.cta-btn:hover {
+    background: #fff;
+    color: #000;
+}
+
+.cta-btn.primary {
+    background: #fff;
+    color: #000;
+}
+
+.cta-btn.primary:hover {
+    background: #ddd;
+    border-color: #ddd;
+}
+
+.tours-container,
+.plaques-container {
+    padding: 24px 16px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.page-title {
+    font-size: 1.8rem;
+    color: #fff;
+    margin-bottom: 20px;
+}
+
+.empty-state {
+    color: #888;
+    font-size: 1rem;
 }
 
 .index-container {
