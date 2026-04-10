@@ -183,9 +183,20 @@ html, body {
 
 .hero-cta {
     display: flex;
-    gap: 14px;
+    gap: 10px;
     justify-content: center;
     flex-wrap: wrap;
+}
+
+@media (max-width: 480px) {
+    .hero-cta {
+        gap: 8px;
+    }
+
+    .cta-btn {
+        padding: 10px 20px;
+        font-size: 0.9rem;
+    }
 }
 
 .cta-btn {
