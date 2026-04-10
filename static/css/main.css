@@ -138,6 +138,17 @@ html, body {
     background: #222;
 }
 
+@media (max-width: 480px) {
+    .main-nav {
+        gap: 4px;
+    }
+
+    .main-nav .nav-link {
+        font-size: 0.8rem;
+        padding: 5px 8px;
+    }
+}
+
 /* ===========================
    LANDING PAGE
    =========================== */
