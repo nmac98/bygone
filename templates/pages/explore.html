@@ -11,6 +11,23 @@
   </div>
 </div>
 
+<!-- Location bottom sheet -->
+<div id="location-sheet" class="location-sheet">
+  <div class="sheet-drag-handle"></div>
+  <div class="sheet-inner">
+    <div id="sheet-image-wrap" class="sheet-image-wrap">
+      <img id="sheet-img" class="sheet-img" src="" alt="">
+    </div>
+    <div class="sheet-body">
+      <h2 id="sheet-name" class="sheet-name"></h2>
+      <p id="sheet-description" class="sheet-description"></p>
+      <a id="sheet-link" href="#" class="sheet-btn">Explore location</a>
+    </div>
+    <button class="sheet-close" onclick="closeLocationSheet()" aria-label="Close">✕</button>
+  </div>
+</div>
+<div id="sheet-backdrop" class="sheet-backdrop" onclick="closeLocationSheet()"></div>
+
 <script>
   const locations = {{ locations | tojson | safe }};
   const photos = {{ photos | tojson | safe }};
@@ -23,44 +40,41 @@
   const defaultLat = 53.3498;
   const defaultLon = -6.2603;
 
-  const map = L.map("map").setView([defaultLat, defaultLon], 14);
+  const map = L.map("map", { zoomControl: true }).setView([defaultLat, defaultLon], 14);
 
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
     maxZoom: 19,
-    attribution: '&copy; OpenStreetMap contributors'
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>'
   }).addTo(map);
 
   const markers = [];
 
+  const locationIcon = L.divIcon({
+    className: '',
+    html: '<div class="map-marker-location"></div>',
+    iconSize: [14, 14],
+    iconAnchor: [7, 7],
+    popupAnchor: [0, -10]
+  });
+
+  const photoIcon = L.icon({
+    iconUrl: "/static/icons/photo-marker-black.png",
+    iconSize: [14, 14],
+    iconAnchor: [7, 7]
+  });
+
   locations.forEach(loc => {
     if (loc.lat == null || loc.lon == null) return;
 
-    const marker = L.marker([loc.lat, loc.lon]).addTo(map);
-
-    const imgHtml = loc.main_image_url
-      ? `<img src="${loc.main_image_url}" width="200"><br>`
-      : "";
-
-    const popupHtml = `
-      <b>${loc.name}</b><br>
-      ${imgHtml}
-      <a href="/gallery/${loc.id}" target="_blank">See more photos</a>
-    `;
-
-    marker.bindPopup(popupHtml);
+    const marker = L.marker([loc.lat, loc.lon], { icon: locationIcon }).addTo(map);
+    marker.on('click', () => openLocationSheet(loc));
     markers.push(marker);
   });
 
   photos.forEach(photo => {
     if (photo.lat == null || photo.lon == null) return;
 
-    const icon = L.icon({
-      iconUrl: "/static/icons/photo-marker-black.png",
-      iconSize: [14, 14],
-      iconAnchor: [7, 7]
-    });
-
-    const marker = L.marker([photo.lat, photo.lon], { icon }).addTo(map);
+    const marker = L.marker([photo.lat, photo.lon], { icon: photoIcon }).addTo(map);
 
     const photoImg = photo.url
       ? `<img
@@ -75,7 +89,7 @@
     const popupHtml = `
       <b>${photo.title || "Untitled"}</b><br>
       ${photoImg}
-      <small>Click Image to Enlarge</small>
+      <small>Click image to enlarge</small>
     `;
 
     marker.bindPopup(popupHtml);
@@ -87,6 +101,9 @@
     map.fitBounds(group.getBounds().pad(0.2));
   }
 
+  // Close sheet when map is clicked
+  map.on('click', closeLocationSheet);
+
   map.on("popupopen", (e) => {
     const popupEl = e.popup.getElement();
     if (!popupEl) return;
@@ -95,16 +112,44 @@
       img.addEventListener("click", (evt) => {
         evt.preventDefault();
         evt.stopPropagation();
-
-        const photoId = img.dataset.photoId;
-        const photo = photosById[String(photoId)];
-        if (!photo) return;
-
-        openMapLightbox(photo);
+        const photo = photosById[String(img.dataset.photoId)];
+        if (photo) openMapLightbox(photo);
       });
     });
   });
 
+  // --- Location bottom sheet ---
+  function openLocationSheet(loc) {
+    const sheet = document.getElementById('location-sheet');
+    const backdrop = document.getElementById('sheet-backdrop');
+    const imgEl = document.getElementById('sheet-img');
+    const imgWrap = document.getElementById('sheet-image-wrap');
+    const nameEl = document.getElementById('sheet-name');
+    const descEl = document.getElementById('sheet-description');
+    const linkEl = document.getElementById('sheet-link');
+
+    nameEl.textContent = loc.name || '';
+    descEl.textContent = loc.description || '';
+    linkEl.href = `/gallery/${loc.id}`;
+
+    if (loc.main_image_url) {
+      imgEl.src = loc.main_image_url;
+      imgEl.alt = loc.name;
+      imgWrap.style.display = 'block';
+    } else {
+      imgWrap.style.display = 'none';
+    }
+
+    sheet.classList.add('active');
+    backdrop.classList.add('active');
+  }
+
+  function closeLocationSheet() {
+    document.getElementById('location-sheet').classList.remove('active');
+    document.getElementById('sheet-backdrop').classList.remove('active');
+  }
+
+  // --- Photo lightbox ---
   function openMapLightbox(photo) {
     const lb = document.getElementById("map-lightbox");
     const img = document.getElementById("map-lightbox-img");
@@ -118,7 +163,6 @@
 
     img.src = photo.url;
     img.alt = photo.title || "";
-
     capDate.textContent = photo.date || "";
     capTitle.textContent = photo.title || "";
     capDesc.textContent = photo.description || "";
@@ -136,21 +180,17 @@
 
   function toggleMapCaption(e) {
     if (e) e.stopPropagation();
-
     const cap = document.getElementById("map-caption");
     const btn = document.getElementById("map-caption-info-btn");
     if (!cap || !btn) return;
-
     const willExpand = cap.classList.contains("collapsed");
     cap.classList.toggle("collapsed", !willExpand);
     cap.classList.toggle("expanded", willExpand);
-
     btn.textContent = willExpand ? "✕" : "ⓘ";
   }
 
   function closeMapLightbox(e) {
     if (e) e.stopPropagation();
-
     const lb = document.getElementById("map-lightbox");
     const img = document.getElementById("map-lightbox-img");
     const cap = document.getElementById("map-caption");
@@ -158,17 +198,13 @@
 
     if (img) img.src = "";
     if (lb) lb.style.display = "none";
-
-    if (cap) {
-      cap.classList.add("collapsed");
-      cap.classList.remove("expanded");
-    }
+    if (cap) { cap.classList.add("collapsed"); cap.classList.remove("expanded"); }
     if (btn) btn.textContent = "ⓘ";
-
     document.body.style.overflow = "";
   }
 </script>
 
+<!-- Photo lightbox -->
 <div id="map-lightbox" class="lightbox" onclick="closeMapLightbox(event)">
   <img id="map-lightbox-img" class="lightbox-img" />
   <button class="lightbox-close" onclick="closeMapLightbox(event)" aria-label="Close">✕</button>
@@ -177,7 +213,6 @@
     <div class="caption-header">
       <span class="caption-date" id="map-caption-date"></span>
       <span class="caption-title" id="map-caption-title"></span>
-
       <button
         class="caption-info-btn"
         id="map-caption-info-btn"
@@ -187,7 +222,6 @@
         style="display:none;"
       >ⓘ</button>
     </div>
-
     <div class="caption-description" id="map-caption-desc"></div>
   </div>
 </div>
