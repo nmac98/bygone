@@ -239,7 +239,7 @@ html, body {
 .tours-container,
 .plaques-container {
     padding: 24px 16px;
-    max-width: 900px;
+    max-width: 700px;
     margin: 0 auto;
 }
 
@@ -252,6 +252,74 @@ html, body {
 .empty-state {
     color: #888;
     font-size: 1rem;
+}
+
+/* ===========================
+   TOUR CARDS
+   =========================== */
+
+.tour-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.tour-card {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    height: 200px;
+    border-radius: 14px;
+    overflow: hidden;
+    background-size: cover;
+    background-position: center;
+    text-decoration: none;
+    transition: transform 0.15s ease;
+}
+
+.tour-card:active {
+    transform: scale(0.98);
+}
+
+.tour-card-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.15) 60%, transparent 100%);
+    border-radius: 14px;
+}
+
+.tour-card-body {
+    position: relative;
+    z-index: 1;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.tour-card-name {
+    color: #fff;
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.tour-card-desc {
+    color: #ddd;
+    font-size: 0.85rem;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+@media (min-width: 600px) {
+    .tour-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
 }
 
 .index-container {

@@ -41,6 +41,7 @@ class Route(db.Model):
     id = db.Column(db.String, primary_key=True)
     name = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, nullable=True)
+    cover_image = db.Column(db.String(500), nullable=True)
 
     stops = db.relationship('RouteStop', backref='route', lazy=True, order_by="RouteStop.order", cascade="all, delete-orphan")
 

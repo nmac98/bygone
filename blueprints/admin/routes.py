@@ -192,7 +192,8 @@ def new_route():
             flash("A route with that ID already exists.", "error")
             return redirect(request.url)
 
-        new_r = Route(id=route_id, name=name, description=description)
+        cover_image = request.form.get('cover_image', '').strip() or None
+        new_r = Route(id=route_id, name=name, description=description, cover_image=cover_image)
         db.session.add(new_r)
         db.session.commit()
 
@@ -209,6 +210,7 @@ def edit_route(route_id):
     if request.method == 'POST':
         route.name = request.form['name'].strip()
         route.description = request.form.get('description', '')
+        route.cover_image = request.form.get('cover_image', '').strip() or None
         db.session.commit()
 
         flash("Route updated.", "success")

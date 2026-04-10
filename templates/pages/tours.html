@@ -6,16 +6,21 @@
 <div class="tours-container">
     <h1 class="page-title">Tours</h1>
 
-    <ul class="routes-list">
+    <div class="tour-grid">
         {% for route in routes %}
-        <li>
-            <a class="routes-btn" href="{{ url_for('routes_app.view_route', route_name=route.name) }}">
-                {{ route.name }}
-            </a>
-        </li>
+        <a class="tour-card" href="{{ url_for('routes_app.view_route', route_name=route.name) }}"
+           style="background-image: url('{{ url_for('static', filename='images/' + route.cover_image) if route.cover_image else url_for('static', filename='images/dame street towards trinity 1890.jpg') }}');">
+            <div class="tour-card-overlay"></div>
+            <div class="tour-card-body">
+                <span class="tour-card-name">{{ route.name }}</span>
+                {% if route.description %}
+                <span class="tour-card-desc">{{ route.description }}</span>
+                {% endif %}
+            </div>
+        </a>
         {% else %}
-        <li class="empty-state">No tours available yet.</li>
+        <p class="empty-state">No tours available yet.</p>
         {% endfor %}
-    </ul>
+    </div>
 </div>
 {% endblock %}

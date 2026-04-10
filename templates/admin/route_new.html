@@ -22,6 +22,13 @@
       <textarea name="description" id="description" rows="4" class="form-control"></textarea>
     </div>
 
+    <div class="form-group">
+      <label for="cover_image">Cover Image Filename</label>
+      <input type="text" name="cover_image" id="cover_image" class="form-control"
+             placeholder="e.g. capel1.jpg">
+      <small class="text-muted">Filename from static/images/. Leave blank to use default.</small>
+    </div>
+
     <button type="submit" class="btn btn-primary">Create Route</button>
     <a href="{{ url_for('admin.admin_routes') }}" class="btn btn-secondary">Cancel</a>
   </form>
