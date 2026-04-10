@@ -11,7 +11,7 @@
   </div>
 </div>
 
-<!-- Location bottom sheet -->
+<!-- Bottom sheet (shared for locations and photos) -->
 <div id="location-sheet" class="location-sheet">
   <div class="sheet-drag-handle"></div>
   <div class="sheet-inner">
@@ -19,9 +19,10 @@
       <img id="sheet-img" class="sheet-img" src="" alt="">
     </div>
     <div class="sheet-body">
+      <span id="sheet-date" class="sheet-date"></span>
       <h2 id="sheet-name" class="sheet-name"></h2>
       <p id="sheet-description" class="sheet-description"></p>
-      <a id="sheet-link" href="#" class="sheet-btn">Explore location</a>
+      <div id="sheet-actions" class="sheet-actions"></div>
     </div>
     <button class="sheet-close" onclick="closeLocationSheet()" aria-label="Close">✕</button>
   </div>
@@ -48,6 +49,13 @@
   }).addTo(map);
 
   const markers = [];
+  let selectedMarkerEl = null;
+
+  function selectMarker(markerEl) {
+    if (selectedMarkerEl) selectedMarkerEl.classList.remove('selected');
+    selectedMarkerEl = markerEl;
+    if (selectedMarkerEl) selectedMarkerEl.classList.add('selected');
+  }
 
   const locationIcon = L.divIcon({
     className: '',
@@ -65,34 +73,23 @@
 
   locations.forEach(loc => {
     if (loc.lat == null || loc.lon == null) return;
-
     const marker = L.marker([loc.lat, loc.lon], { icon: locationIcon }).addTo(map);
-    marker.on('click', () => openLocationSheet(loc));
+    marker.on('click', (e) => {
+      L.DomEvent.stopPropagation(e);
+      selectMarker(marker.getElement().querySelector('.map-marker-location'));
+      openLocationSheet(loc);
+    });
     markers.push(marker);
   });
 
   photos.forEach(photo => {
     if (photo.lat == null || photo.lon == null) return;
-
     const marker = L.marker([photo.lat, photo.lon], { icon: photoIcon }).addTo(map);
-
-    const photoImg = photo.url
-      ? `<img
-            src="${photo.url}"
-            width="180"
-            style="cursor:pointer; display:block;"
-            class="js-map-lightbox"
-            data-photo-id="${photo.id}"
-        ><br>`
-      : "";
-
-    const popupHtml = `
-      <b>${photo.title || "Untitled"}</b><br>
-      ${photoImg}
-      <small>Click image to enlarge</small>
-    `;
-
-    marker.bindPopup(popupHtml);
+    marker.on('click', (e) => {
+      L.DomEvent.stopPropagation(e);
+      selectMarker(null);
+      openPhotoSheet(photo);
+    });
     markers.push(marker);
   });
 
@@ -101,80 +98,92 @@
     map.fitBounds(group.getBounds().pad(0.2));
   }
 
-  // Close sheet when map is clicked
+  // Close sheet on empty map tap
   map.on('click', closeLocationSheet);
 
-  map.on("popupopen", (e) => {
-    const popupEl = e.popup.getElement();
-    if (!popupEl) return;
+  // --- Shared sheet helpers ---
+  function showSheet({ imageUrl, imageName, date, name, description, actions }) {
+    const imgEl     = document.getElementById('sheet-img');
+    const imgWrap   = document.getElementById('sheet-image-wrap');
+    const dateEl    = document.getElementById('sheet-date');
+    const nameEl    = document.getElementById('sheet-name');
+    const descEl    = document.getElementById('sheet-description');
+    const actionsEl = document.getElementById('sheet-actions');
 
-    popupEl.querySelectorAll(".js-map-lightbox").forEach(img => {
-      img.addEventListener("click", (evt) => {
-        evt.preventDefault();
-        evt.stopPropagation();
-        const photo = photosById[String(img.dataset.photoId)];
-        if (photo) openMapLightbox(photo);
-      });
-    });
-  });
-
-  // --- Location bottom sheet ---
-  function openLocationSheet(loc) {
-    const sheet = document.getElementById('location-sheet');
-    const backdrop = document.getElementById('sheet-backdrop');
-    const imgEl = document.getElementById('sheet-img');
-    const imgWrap = document.getElementById('sheet-image-wrap');
-    const nameEl = document.getElementById('sheet-name');
-    const descEl = document.getElementById('sheet-description');
-    const linkEl = document.getElementById('sheet-link');
-
-    nameEl.textContent = loc.name || '';
-    descEl.textContent = loc.description || '';
-    linkEl.href = `/gallery/${loc.id}`;
-
-    if (loc.main_image_url) {
-      imgEl.src = loc.main_image_url;
-      imgEl.alt = loc.name;
+    if (imageUrl) {
+      imgEl.src = imageUrl;
+      imgEl.alt = imageName || '';
       imgWrap.style.display = 'block';
     } else {
       imgWrap.style.display = 'none';
     }
 
-    sheet.classList.add('active');
-    backdrop.classList.add('active');
+    dateEl.textContent        = date || '';
+    dateEl.style.display      = date ? 'block' : 'none';
+    nameEl.textContent        = name || '';
+    descEl.textContent        = description || '';
+    actionsEl.innerHTML       = actions || '';
+
+    document.getElementById('location-sheet').classList.add('active');
+    document.getElementById('sheet-backdrop').classList.add('active');
+  }
+
+  function openLocationSheet(loc) {
+    showSheet({
+      imageUrl:    loc.main_image_url,
+      imageName:   loc.name,
+      date:        null,
+      name:        loc.name,
+      description: loc.description,
+      actions:     `<a href="/gallery/${loc.id}" class="sheet-btn">Explore location</a>`
+    });
+  }
+
+  function openPhotoSheet(photo) {
+    showSheet({
+      imageUrl:    photo.url,
+      imageName:   photo.title,
+      date:        photo.date,
+      name:        photo.title || 'Untitled',
+      description: photo.description,
+      actions:     photo.url
+        ? `<button class="sheet-btn" onclick="openMapLightbox(photosById['${photo.id}'])">Enlarge photo</button>`
+        : ''
+    });
   }
 
   function closeLocationSheet() {
     document.getElementById('location-sheet').classList.remove('active');
     document.getElementById('sheet-backdrop').classList.remove('active');
+    selectMarker(null);
   }
 
   // --- Photo lightbox ---
   function openMapLightbox(photo) {
-    const lb = document.getElementById("map-lightbox");
-    const img = document.getElementById("map-lightbox-img");
-    const cap = document.getElementById("map-caption");
-    const capDate = document.getElementById("map-caption-date");
+    const lb     = document.getElementById("map-lightbox");
+    const img    = document.getElementById("map-lightbox-img");
+    const cap    = document.getElementById("map-caption");
+    const capDate  = document.getElementById("map-caption-date");
     const capTitle = document.getElementById("map-caption-title");
-    const capDesc = document.getElementById("map-caption-desc");
-    const capBtn = document.getElementById("map-caption-info-btn");
+    const capDesc  = document.getElementById("map-caption-desc");
+    const capBtn   = document.getElementById("map-caption-info-btn");
 
     if (!lb || !img || !cap || !capDate || !capTitle || !capDesc || !capBtn) return;
 
     img.src = photo.url;
     img.alt = photo.title || "";
-    capDate.textContent = photo.date || "";
+    capDate.textContent  = photo.date || "";
     capTitle.textContent = photo.title || "";
-    capDesc.textContent = photo.description || "";
+    capDesc.textContent  = photo.description || "";
 
     cap.classList.add("collapsed");
     cap.classList.remove("expanded");
 
     const hasDesc = (photo.description || "").trim().length > 0;
     capBtn.style.display = hasDesc ? "inline-block" : "none";
-    capBtn.textContent = "ⓘ";
+    capBtn.textContent   = "ⓘ";
 
-    lb.style.display = "flex";
+    lb.style.display          = "flex";
     document.body.style.overflow = "hidden";
   }
 
@@ -191,13 +200,13 @@
 
   function closeMapLightbox(e) {
     if (e) e.stopPropagation();
-    const lb = document.getElementById("map-lightbox");
+    const lb  = document.getElementById("map-lightbox");
     const img = document.getElementById("map-lightbox-img");
     const cap = document.getElementById("map-caption");
     const btn = document.getElementById("map-caption-info-btn");
 
     if (img) img.src = "";
-    if (lb) lb.style.display = "none";
+    if (lb)  lb.style.display = "none";
     if (cap) { cap.classList.add("collapsed"); cap.classList.remove("expanded"); }
     if (btn) btn.textContent = "ⓘ";
     document.body.style.overflow = "";
