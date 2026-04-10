@@ -8,27 +8,27 @@
   <form method="POST" enctype="multipart/form-data">
     <div class="form-group">
       <label>File *</label>
-      <input type="file" name="file" required>
+      <input type="file" name="file" required class="form-control">
     </div>
 
     <div class="form-group">
       <label>Title / Name</label>
-      <input type="text" name="title">
+      <input type="text" name="title" class="form-control">
     </div>
 
     <div class="form-group">
       <label>Date (e.g. "1916", "c. 1900s")</label>
-      <input type="text" name="date">
+      <input type="text" name="date" class="form-control">
     </div>
 
     <div class="form-group">
       <label>Description</label>
-      <textarea name="description"></textarea>
+      <textarea name="description" class="form-control"></textarea>
     </div>
 
     <div class="form-group">
       <label>Location (optional)</label>
-      <select name="location_id">
+      <select name="location_id" class="form-control">
         <option value="">-- None --</option>
         {% for loc in locations %}
           <option value="{{ loc.id }}">{{ loc.name }}</option>
@@ -38,24 +38,25 @@
 
     <div class="form-group">
       <label for="lat">Latitude</label>
-      <input type="text" id="lat" name="lat" placeholder="e.g. 53.3498">
+      <input type="text" id="lat" name="lat" placeholder="e.g. 53.3498" class="form-control">
     </div>
 
     <div class="form-group">
       <label for="lon">Longitude</label>
-      <input type="text" id="lon" name="lon" placeholder="-6.2603">
+      <input type="text" id="lon" name="lon" placeholder="-6.2603" class="form-control">
     </div>
 
     <h3>GPS Location</h3>
     <p>Click on the map to set the latitude and longitude.</p>
 
-    <div id="photo-map" style="height: 300px; margin-bottom: 1rem;"></div>
+    <div id="photo-map" style="height:300px; border-radius:10px; overflow:hidden; margin-bottom:16px;"></div>
 
-    <button type="button" id="update-map" class="btn btn-secondary" style="margin-bottom: 1rem;">
-    Update Map Lat/Lon
-    </button>
+    <div style="margin-bottom:16px;">
+      <button type="button" id="update-map" class="btn btn-secondary">Update Map from Lat/Lon</button>
+    </div>
 
-    <button type="submit">Upload</button>
+    <button type="submit" class="btn btn-primary">Upload</button>
+    <a href="{{ url_for('admin.images_list') }}" class="btn btn-secondary">Cancel</a>
   </form>
 </div>
 

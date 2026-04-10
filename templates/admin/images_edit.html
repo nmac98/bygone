@@ -6,35 +6,35 @@
   <h1>Edit Image</h1>
 
   {% if original %}
-    <div style="margin-bottom: 1rem;">
-      <img src="{{ original.public_url }}" style="max-width: 300px; height:auto;">
+    <div style="margin-bottom:16px;">
+      <img src="{{ original.public_url }}" style="max-width:300px; height:auto; border-radius:8px;">
     </div>
   {% endif %}
 
   <form method="POST" enctype="multipart/form-data">
     <div class="form-group">
       <label>Replace file (optional)</label>
-      <input type="file" name="file">
+      <input type="file" name="file" class="form-control">
     </div>
 
     <div class="form-group">
       <label>Title / Name</label>
-      <input type="text" name="title" value="{{ img.title or '' }}">
+      <input type="text" name="title" value="{{ img.title or '' }}" class="form-control">
     </div>
 
     <div class="form-group">
       <label>Date</label>
-      <input type="text" name="date" value="{{ img.date or '' }}">
+      <input type="text" name="date" value="{{ img.date or '' }}" class="form-control">
     </div>
 
     <div class="form-group">
       <label>Description</label>
-      <textarea name="description">{{ img.description or '' }}</textarea>
+      <textarea name="description" class="form-control">{{ img.description or '' }}</textarea>
     </div>
 
     <div class="form-group">
       <label>Location</label>
-      <select name="location_id">
+      <select name="location_id" class="form-control">
         <option value="">-- None --</option>
         {% for loc in locations %}
           <option value="{{ loc.id }}" {% if loc.id == current_location_id %}selected{% endif %}>
@@ -46,24 +46,25 @@
 
     <div class="form-group">
       <label for="lat">Latitude</label>
-      <input type="text" id="lat" name="lat" value="{{ lat_val }}">
+      <input type="text" id="lat" name="lat" value="{{ lat_val }}" class="form-control">
     </div>
 
     <div class="form-group">
       <label for="lon">Longitude</label>
-      <input type="text" id="lon" name="lon" value="{{ lon_val }}">
+      <input type="text" id="lon" name="lon" value="{{ lon_val }}" class="form-control">
     </div>
 
     <h3>GPS Location</h3>
     <p>Click on the map to set the latitude and longitude.</p>
 
-    <div id="photo-map" style="height: 300px; margin-bottom: 1rem;"></div>
+    <div id="photo-map" style="height:300px; border-radius:10px; overflow:hidden; margin-bottom:16px;"></div>
 
-    <button type="button" id="update-map" class="btn btn-secondary" style="margin-bottom: 1rem;">
-    Update Map Lat/Lon
-    </button>
+    <div style="margin-bottom:16px;">
+      <button type="button" id="update-map" class="btn btn-secondary">Update Map from Lat/Lon</button>
+    </div>
 
-    <button type="submit">Save changes</button>
+    <button type="submit" class="btn btn-primary">Save Changes</button>
+    <a href="{{ url_for('admin.images_list') }}" class="btn btn-secondary">Cancel</a>
   </form>
 </div>
 

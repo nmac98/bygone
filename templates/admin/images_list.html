@@ -5,15 +5,17 @@
 <div class="admin-container">
   <h1>Image Library</h1>
 
-  <form method="GET" style="margin-bottom: 1rem;">
-    <input type="text" name="q" placeholder="Search by title..."
-           value="{{ search_query or '' }}">
-    <button type="submit">Search</button>
-    <a href="{{ url_for('admin.images_upload') }}">+ Upload new</a>
-  </form>
+  <div style="display:flex; gap:10px; align-items:center; margin-bottom:20px; flex-wrap:wrap;">
+    <form method="GET" style="display:flex; gap:8px; flex:1; min-width:200px;">
+      <input type="text" name="q" placeholder="Search by title..."
+             value="{{ search_query or '' }}" class="form-control">
+      <button type="submit" class="btn btn-secondary">Search</button>
+    </form>
+    <a href="{{ url_for('admin.images_upload') }}" class="btn btn-primary">+ Upload New</a>
+  </div>
 
   {% if images %}
-    <table>
+    <table class="table">
       <thead>
         <tr>
           <th>Preview</th>
@@ -30,36 +32,36 @@
         <tr>
           <td>
             {% if original %}
-              <img src="{{ original.public_url }}" style="max-width: 150px; height:auto;">
+              <img src="{{ original.public_url }}" style="max-width:120px; height:70px; object-fit:cover; border-radius:6px;">
             {% else %}
-              (no file)
+              <span style="color:#555;">No file</span>
             {% endif %}
           </td>
           <td>
             <strong>{{ img.title or "Untitled" }}</strong><br>
-            <small>{{ img.date or "" }}</small>
+            <small style="color:#666;">{{ img.date or "" }}</small>
           </td>
           <td>
             {% if loc_rel %}
               {{ loc_rel.location.name }}
             {% else %}
-              <em>Unassigned</em>
+              <em style="color:#555;">Unassigned</em>
             {% endif %}
           </td>
-          <td>
+          <td style="font-size:0.8rem;">
             {% if img.lat and img.lon %}
-              {{ "%.5f"|format(img.lat) }}, {{ "%.5f"|format(img.lon) }}
+              {{ "%.4f"|format(img.lat) }},<br>{{ "%.4f"|format(img.lon) }}
             {% else %}
-              <em>None</em>
+              <em style="color:#555;">None</em>
             {% endif %}
           </td>
           <td>
-            <a href="{{ url_for('admin.images_edit', image_id=img.id) }}">Edit</a>
+            <a href="{{ url_for('admin.images_edit', image_id=img.id) }}" class="btn btn-secondary" style="padding:5px 10px; font-size:0.8rem;">Edit</a>
             <form method="POST"
                   action="{{ url_for('admin.images_delete', image_id=img.id) }}"
                   style="display:inline;"
                   onsubmit="return confirm('Delete this image and file?');">
-              <button type="submit">Delete</button>
+              <button type="submit" class="btn btn-danger" style="padding:5px 10px; font-size:0.8rem;">Delete</button>
             </form>
           </td>
         </tr>

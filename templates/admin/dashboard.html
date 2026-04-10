@@ -1,13 +1,27 @@
 {% extends "base.html" %}
+{% block title %}Admin | Dashboard{% endblock %}
 
 {% block content %}
-<h1>Admin Dashboard</h1>
+<div class="admin-container">
+    <h1>Admin Dashboard</h1>
 
-<ul>
-    <li><a href="{{ url_for('admin.admin_locations') }}">Manage Locations</a></li>
-    <li><a href="{{ url_for('admin.admin_routes') }}">Manage Routes</a></li>
-    <li><a href="{{ url_for('admin.images_list') }}">Manage Images</a></li>
-    <li><a href="{{ url_for('admin.topics_list') }}">Manage Topics</a></li>
-</ul>
-
+    <div class="admin-dashboard-grid">
+        <a class="admin-dashboard-card" href="{{ url_for('admin.admin_locations') }}">
+            <span class="card-icon">📍</span>
+            Locations
+        </a>
+        <a class="admin-dashboard-card" href="{{ url_for('admin.admin_routes') }}">
+            <span class="card-icon">🗺</span>
+            Routes
+        </a>
+        <a class="admin-dashboard-card" href="{{ url_for('admin.images_list') }}">
+            <span class="card-icon">🖼</span>
+            Images
+        </a>
+        <a class="admin-dashboard-card" href="{{ url_for('admin.topics_list') }}">
+            <span class="card-icon">🔖</span>
+            Topics
+        </a>
+    </div>
+</div>
 {% endblock %}
