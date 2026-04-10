@@ -3,7 +3,6 @@ import base64
 import json
 import re
 
-import anthropic
 from flask import render_template, request, jsonify
 from . import main_bp
 from models import Location, Route, LocationImage, ImageAsset
@@ -87,6 +86,7 @@ def plaques():
 
 @main_bp.route("/plaques/analyze", methods=["POST"])
 def analyze_plaque():
+    import anthropic
     file = request.files.get("image")
     if not file:
         return jsonify({"error": "No image provided."}), 400
