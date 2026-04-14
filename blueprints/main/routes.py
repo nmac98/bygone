@@ -87,12 +87,30 @@ def plaques():
 @main_bp.route("/plaques/analyze", methods=["POST"])
 def analyze_plaque():
     import anthropic
+    from PIL import Image
+    import io
+
     file = request.files.get("image")
     if not file:
         return jsonify({"error": "No image provided."}), 400
 
-    image_data = base64.standard_b64encode(file.read()).decode("utf-8")
-    media_type = file.content_type or "image/jpeg"
+    # Resize if image exceeds Anthropic's 5 MB base64 limit
+    raw = file.read()
+    img = Image.open(io.BytesIO(raw))
+    img = img.convert("RGB")
+
+    quality = 85
+    max_bytes = 4 * 1024 * 1024  # 4 MB target to stay well under the 5 MB limit
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=quality)
+
+    while buf.tell() > max_bytes and quality > 30:
+        quality -= 10
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=quality)
+
+    image_data = base64.standard_b64encode(buf.getvalue()).decode("utf-8")
+    media_type = "image/jpeg"
 
     client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
