@@ -41,7 +41,8 @@
   const defaultLat = 53.3498;
   const defaultLon = -6.2603;
 
-  const map = L.map("map", { zoomControl: true }).setView([defaultLat, defaultLon], 14);
+  const map = L.map("map", { zoomControl: true }).setView([defaultLat, defaultLon], 16);
+
 
   L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
     maxZoom: 19,
@@ -93,10 +94,6 @@
     markers.push(marker);
   });
 
-  if (markers.length > 0) {
-    const group = L.featureGroup(markers);
-    map.fitBounds(group.getBounds().pad(0.2));
-  }
 
   // Close sheet on empty map tap
   map.on('click', closeLocationSheet);

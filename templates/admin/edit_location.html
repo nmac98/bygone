@@ -1,135 +1,476 @@
 {% extends "base.html" %}
-{% block title %}Admin | Edit Location{% endblock %}
+{% block title %}Admin | {{ location.name }}{% endblock %}
 
 {% block content %}
-<div class="admin-container">
-  <h1>Edit Location: {{ location.name }}</h1>
+<div class="editor-wrap">
 
-  <form method="POST">
-    <div class="form-group">
-      <label>ID</label>
-      <input type="text" class="form-control" value="{{ location.id }}" disabled>
-      <small class="text-muted">ID cannot be changed.</small>
+  <!-- ── HEADER ───────────────────────────────────────────── -->
+  <div class="editor-header">
+    <a href="{{ url_for('admin.admin_locations') }}" class="editor-back">← Locations</a>
+    <span class="editor-header-title">{{ location.name }}</span>
+    <div class="editor-header-actions">
+      <a href="{{ url_for('locations.gallery', loc_id=location.id) }}"
+         target="_blank" class="admin-btn admin-btn--ghost admin-btn--sm">View page ↗</a>
     </div>
+  </div>
 
-    <div class="form-group">
-      <label for="name">Name</label>
-      <input type="text" name="name" id="name" class="form-control"
-             value="{{ location.name }}" required>
-    </div>
-
-    <div class="form-group">
-      <label for="description">Description</label>
-      <textarea name="description" id="description" rows="4"
-                class="form-control">{{ location.description or '' }}</textarea>
-    </div>
-
-    <div class="form-group">
-      <label for="themes">Themes (comma-separated)</label>
-      <input type="text" name="themes" id="themes" class="form-control"
-             value="{{ themes_text }}">
-    </div>
-
-    <div class="form-group">
-      <label for="category">Category</label>
-      <select name="category" id="category" class="form-control" required>
-        {% for cat in categories %}
-          <option value="{{ cat.value }}"
-            {% if location.category and location.category.value == cat.value %}selected{% endif %}>
-            {{ cat.value }}
-          </option>
+  <!-- flash messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="editor-flash-wrap">
+        {% for cat, msg in messages %}
+          <div class="editor-flash editor-flash--{{ cat }}">{{ msg }}</div>
         {% endfor %}
-      </select>
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <!-- ══════════════════════════════════════════════════════
+       SECTION 1 — DETAILS
+  ══════════════════════════════════════════════════════════ -->
+  <section class="editor-section">
+    <h2 class="editor-section-title">Details</h2>
+    <form method="POST" class="editor-form">
+
+      <div class="editor-grid-2">
+        <div class="admin-field">
+          <label class="admin-label">Name</label>
+          <input class="admin-input" type="text" name="name"
+                 value="{{ location.name }}" required>
+        </div>
+        <div class="admin-field">
+          <label class="admin-label">Category</label>
+          <select class="admin-input" name="category" required>
+            {% for cat in categories %}
+              <option value="{{ cat.value }}"
+                {% if location.category and location.category.value == cat.value %}selected{% endif %}>
+                {{ cat.value }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="admin-field">
+        <div class="admin-label-row">
+          <label class="admin-label">Description</label>
+          <button type="button" class="ai-draft-btn"
+            onclick="openAiModal('location_description', 'description', this)">
+            ✦ Draft with AI
+          </button>
+        </div>
+        <textarea class="admin-input" name="description" id="description" rows="4">{{ location.description or '' }}</textarea>
+      </div>
+
+      <div class="admin-field">
+        <label class="admin-label">Themes <span class="admin-optional">(comma-separated)</span></label>
+        <input class="admin-input" type="text" name="themes" value="{{ themes_text }}">
+      </div>
+
+      <!-- Map -->
+      <div class="admin-field">
+        <label class="admin-label">Map pin</label>
+        <div class="coord-row">
+          <input class="admin-input admin-input--short" type="text" name="lat" id="lat"
+                 placeholder="Latitude"
+                 value="{{ location.lat if location.lat is not none else '' }}">
+          <input class="admin-input admin-input--short" type="text" name="lon" id="lon"
+                 placeholder="Longitude"
+                 value="{{ location.lon if location.lon is not none else '' }}">
+          <button type="button" class="admin-btn admin-btn--ghost admin-btn--sm" id="update-map">
+            Centre map
+          </button>
+        </div>
+        <p class="admin-hint">Click the map to set coordinates, or type them above.</p>
+        <div id="location-map" class="editor-map"></div>
+      </div>
+
+      <div class="admin-actions">
+        <button class="admin-btn admin-btn--primary" type="submit">Save details</button>
+      </div>
+
+    </form>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════
+       SECTION 2 — PHOTOS
+  ══════════════════════════════════════════════════════════ -->
+  <section class="editor-section">
+    <div class="editor-section-header">
+      <h2 class="editor-section-title">Photos</h2>
+      <a href="{{ url_for('admin.images_upload') }}?location_id={{ location.id }}"
+         class="admin-btn admin-btn--sm admin-btn--ghost">+ Upload photo</a>
     </div>
 
+    {% set photos = location.supabase_images | sort(attribute='sort_order') %}
+    {% if photos %}
+    <div class="photo-grid">
+      {% for li in photos %}
+        {% set img = li.image %}
+        {% set orig = (img.files | selectattr("variant","equalto","original") | list | first)
+                      or (img.files | list | first) %}
+        <div class="photo-card">
+          {% if orig %}
+            <img class="photo-thumb" src="{{ orig.public_url }}" alt="{{ img.title or '' }}">
+          {% else %}
+            <div class="photo-thumb photo-thumb--empty">No file</div>
+          {% endif %}
+          <div class="photo-card-body">
+            <span class="photo-title">{{ img.title or '(untitled)' }}</span>
+            {% if img.date %}<span class="photo-date">{{ img.date }}</span>{% endif %}
+          </div>
+          <div class="photo-card-actions">
+            <a href="{{ url_for('admin.images_edit', image_id=img.id) }}"
+               class="admin-btn admin-btn--ghost admin-btn--xs">Edit</a>
+            <form method="POST"
+                  action="{{ url_for('admin.location_image_detach', location_id=location.id, image_id=img.id) }}"
+                  onsubmit="return confirm('Remove this photo from the location?')">
+              <button class="admin-btn admin-btn--danger admin-btn--xs" type="submit">Remove</button>
+            </form>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+    {% else %}
+      <p class="admin-empty">No photos attached yet.
+        <a href="{{ url_for('admin.images_upload') }}?location_id={{ location.id }}">Upload one</a>.
+      </p>
+    {% endif %}
+  </section>
 
-    <hr>
-
-    <h3>Location on Map</h3>
-    <p>Click on the map to set the latitude and longitude.</p>
-
-    <div id="location-map" style="height: 300px; margin-bottom: 1rem;"></div>
-
-    <div class="form-group">
-      <label for="lat">Latitude</label>
-      <input type="text" name="lat" id="lat" class="form-control"
-             value="{{ location.lat if location.lat is not none else '' }}">
+  <!-- ══════════════════════════════════════════════════════
+       SECTION 3 — HISTORY CHAPTERS
+  ══════════════════════════════════════════════════════════ -->
+  <section class="editor-section">
+    <div class="editor-section-header">
+      <h2 class="editor-section-title">History chapters</h2>
     </div>
 
-    <div class="form-group">
-      <label for="lon">Longitude</label>
-      <input type="text" name="lon" id="lon" class="form-control"
-             value="{{ location.lon if location.lon is not none else '' }}">
+    <!-- Existing chapters -->
+    {% set chapters = location.chapters | sort(attribute='sort_order') %}
+    {% if chapters %}
+    <div class="chapter-list">
+      {% for ch in chapters %}
+      <details class="chapter-editor" {% if loop.first %}open{% endif %}>
+        <summary class="chapter-editor-summary">
+          <span class="chapter-editor-order">{{ loop.index }}</span>
+          <span class="chapter-editor-title">{{ ch.title }}</span>
+          <span class="chapter-editor-meta">{{ ch.blocks | length }} block{{ 's' if ch.blocks | length != 1 }}</span>
+        </summary>
+
+        <div class="chapter-editor-body">
+
+          <!-- Chapter metadata -->
+          <form method="POST" action="{{ url_for('admin.chapter_edit', chapter_id=ch.id) }}"
+                class="chapter-meta-form">
+            <div class="editor-grid-2">
+              <div class="admin-field">
+                <label class="admin-label">Title</label>
+                <input class="admin-input" type="text" name="title" value="{{ ch.title }}" required>
+              </div>
+              <div class="admin-field">
+                <label class="admin-label">Sort order</label>
+                <input class="admin-input admin-input--short" type="number"
+                       name="sort_order" value="{{ ch.sort_order }}">
+              </div>
+            </div>
+            <div class="admin-field">
+              <div class="admin-label-row">
+                <label class="admin-label">Summary <span class="admin-optional">(shown as italic intro)</span></label>
+                <button type="button" class="ai-draft-btn"
+                  onclick="openAiModal('chapter_summary', 'summary-{{ ch.id }}', { chapterTitle: '{{ ch.title | e }}' })">
+                  ✦ Draft with AI
+                </button>
+              </div>
+              <textarea class="admin-input" name="summary" id="summary-{{ ch.id }}" rows="2">{{ ch.summary or '' }}</textarea>
+            </div>
+            <div class="admin-actions admin-actions--inline">
+              <button class="admin-btn admin-btn--primary admin-btn--sm" type="submit">Save chapter</button>
+              <form method="POST"
+                    action="{{ url_for('admin.chapter_delete', chapter_id=ch.id) }}"
+                    style="display:inline"
+                    onsubmit="return confirm('Delete chapter "{{ ch.title }}" and all its blocks?')">
+                <button class="admin-btn admin-btn--danger admin-btn--sm" type="submit">Delete chapter</button>
+              </form>
+            </div>
+          </form>
+
+          <!-- Blocks preview -->
+          {% set blocks = ch.blocks | sort(attribute='sort_order') %}
+          {% if blocks %}
+          <div class="block-list">
+            {% for b in blocks %}
+            <div class="block-item block-item--{{ b.block_type }}">
+              <div class="block-item-type">{{ b.block_type }}</div>
+              <div class="block-item-preview">
+                {% if b.block_type == 'text' %}
+                  {{ (b.body or '') | truncate(120) }}
+                {% elif b.block_type == 'image' %}
+                  {% if b.image_asset %}
+                    {% set orig = (b.image_asset.files | selectattr("variant","equalto","original") | list | first)
+                                  or (b.image_asset.files | list | first) %}
+                    <div class="block-image-preview">
+                      {% if orig %}<img src="{{ orig.public_url }}" alt="">{% endif %}
+                      <span>{{ b.caption_override or b.image_asset.title or '(untitled)' }}</span>
+                    </div>
+                  {% else %}
+                    (no image selected)
+                  {% endif %}
+                {% elif b.block_type == 'link' %}
+                  <a href="{{ b.link_url }}" target="_blank">{{ b.link_label or b.link_url }}</a>
+                {% elif b.block_type == 'divider' %}
+                  <hr class="block-divider-preview">
+                {% endif %}
+              </div>
+              <form method="POST"
+                    action="{{ url_for('admin.block_delete', block_id=b.id) }}"
+                    onsubmit="return confirm('Delete this block?')">
+                <button class="admin-btn admin-btn--danger admin-btn--xs" type="submit">✕</button>
+              </form>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+            <p class="admin-empty admin-empty--sm">No blocks yet — add one below.</p>
+          {% endif %}
+
+          <!-- Add block buttons -->
+          <div class="add-block-row">
+            <span class="add-block-label">Add block:</span>
+            {% for btype in ['text', 'image', 'link', 'divider'] %}
+            <a href="{{ url_for('admin.block_new', chapter_id=ch.id) }}?block_type={{ btype }}"
+               class="admin-btn admin-btn--ghost admin-btn--xs">+ {{ btype }}</a>
+            {% endfor %}
+          </div>
+
+          <!-- Topics / Find out more -->
+          {% if ch.chapter_topics %}
+          <div class="chapter-topics-preview">
+            <p class="admin-label" style="margin-bottom:6px;">Find out more links</p>
+            {% for ct in (ch.chapter_topics | sort(attribute='sort_order')) %}
+            <div class="topic-row">
+              <a href="{{ ct.topic.default_url }}" target="_blank">
+                {{ ct.label_override or ct.topic.title }}
+              </a>
+              <form method="POST"
+                    action="{{ url_for('admin.chapter_topic_delete', ct_id=ct.id) }}"
+                    onsubmit="return confirm('Remove this topic link?')">
+                <button class="admin-btn admin-btn--danger admin-btn--xs" type="submit">✕</button>
+              </form>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          <!-- Attach topic -->
+          {% if topics %}
+          <details class="attach-topic-toggle">
+            <summary class="admin-btn admin-btn--ghost admin-btn--xs" style="cursor:pointer;list-style:none;">
+              + Add "find out more" link
+            </summary>
+            <form method="POST"
+                  action="{{ url_for('admin.chapter_topic_attach', chapter_id=ch.id) }}"
+                  class="attach-topic-form">
+              <div class="editor-grid-2">
+                <div class="admin-field">
+                  <label class="admin-label">Topic</label>
+                  <select class="admin-input" name="topic_id" required>
+                    <option value="">— select —</option>
+                    {% for t in topics %}
+                    <option value="{{ t.id }}">{{ t.title }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="admin-field">
+                  <label class="admin-label">Label override <span class="admin-optional">(optional)</span></label>
+                  <input class="admin-input" type="text" name="label_override"
+                         placeholder="Custom link text">
+                </div>
+              </div>
+              <input type="hidden" name="sort_order" value="0">
+              <button class="admin-btn admin-btn--primary admin-btn--sm" type="submit">Attach</button>
+            </form>
+          </details>
+          {% endif %}
+
+        </div>
+      </details>
+      {% endfor %}
     </div>
+    {% else %}
+      <p class="admin-empty">No chapters yet — add one below.</p>
+    {% endif %}
 
-    <button type="button" id="update-map" class="btn btn-secondary" style="margin-bottom: 1rem;">
-      Update Map from Lat/Lon
-    </button>
+    <!-- Add new chapter inline -->
+    <details class="add-chapter-toggle">
+      <summary class="admin-btn admin-btn--ghost" style="list-style:none;cursor:pointer;">
+        + Add chapter
+      </summary>
+      <form method="POST"
+            action="{{ url_for('admin.chapter_new', location_id=location.id) }}"
+            class="add-chapter-form">
+        <div class="editor-grid-2">
+          <div class="admin-field">
+            <label class="admin-label">Title</label>
+            <input class="admin-input" type="text" name="title" required
+                   placeholder="e.g. The Victorian Era">
+          </div>
+          <div class="admin-field">
+            <label class="admin-label">Sort order</label>
+            <input class="admin-input admin-input--short" type="number"
+                   name="sort_order" value="{{ chapters | length }}">
+          </div>
+        </div>
+        <div class="admin-field">
+          <label class="admin-label">Summary <span class="admin-optional">(optional)</span></label>
+          <textarea class="admin-input" name="summary" rows="2"
+                    placeholder="Short intro shown at top of the chapter"></textarea>
+        </div>
+        <button class="admin-btn admin-btn--primary" type="submit">Create chapter</button>
+      </form>
+    </details>
 
-    <div>
-      <button type="submit" class="btn btn-primary">Save Changes</button>
-      <a href="{{ url_for('admin.admin_locations') }}" class="btn btn-secondary">Cancel</a>
-    </div>
-  </form>
-
-  <hr>
-  <h3>History Chapters</h3>
-  <p class="text-muted">Create and edit accordion chapters, blocks, and “Find out more” topics for this location.</p>
-
-  <a href="{{ url_for('admin.chapters_for_location', location_id=location.id) }}"
-    class="btn btn-secondary">
-    Manage Chapters
-  </a>
-
+  </section>
 </div>
 
-<script>
-  const defaultLat = 53.3498;
-  const defaultLon = -6.2603;
+<!-- ── AI DRAFT MODAL ────────────────────────────────────── -->
+<div id="ai-modal" class="ai-modal-backdrop" style="display:none" onclick="if(event.target===this)closeAiModal()">
+  <div class="ai-modal">
+    <div class="ai-modal-header">
+      <span class="ai-modal-title">✦ Draft with AI</span>
+      <button class="ai-modal-close" onclick="closeAiModal()">✕</button>
+    </div>
 
+    <div class="ai-modal-body">
+      <div class="admin-field">
+        <label class="admin-label">Guidance <span class="admin-optional">(optional)</span></label>
+        <textarea id="ai-context" class="admin-input" rows="3"
+          placeholder="e.g. Focus on the 19th century, mention the fire of 1872, keep it under 3 sentences…"></textarea>
+      </div>
+
+      <button id="ai-generate-btn" class="admin-btn admin-btn--primary" onclick="runAiDraft()">
+        Generate
+      </button>
+
+      <div id="ai-result-wrap" style="display:none">
+        <div class="ai-result-box" id="ai-result-text"></div>
+        <div class="ai-result-actions">
+          <button class="admin-btn admin-btn--primary admin-btn--sm" onclick="applyAiDraft()">Use this</button>
+          <button class="admin-btn admin-btn--ghost admin-btn--sm" onclick="runAiDraft()">Regenerate</button>
+        </div>
+      </div>
+
+      <div id="ai-error" class="ai-error" style="display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MAP SCRIPT -->
+<script>
+(function() {
+  const defaultLat = 53.3498, defaultLon = -6.2603;
   const existingLat = {{ location.lat if location.lat is not none else 'null' }};
   const existingLon = {{ location.lon if location.lon is not none else 'null' }};
-
   const startLat = existingLat !== null ? existingLat : defaultLat;
   const startLon = existingLon !== null ? existingLon : defaultLon;
 
-  const map = L.map('location-map').setView([startLat, startLon], 13);
-
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '&copy; OpenStreetMap contributors'
+  const map = L.map('location-map').setView([startLat, startLon], existingLat ? 15 : 13);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    maxZoom: 19
   }).addTo(map);
 
   let marker = null;
-
-  function setMarkerAndInputs(lat, lon) {
-    if (marker) {
-      marker.setLatLng([lat, lon]);
-    } else {
-      marker = L.marker([lat, lon]).addTo(map);
-    }
+  function setMarker(lat, lon) {
+    if (marker) marker.setLatLng([lat, lon]);
+    else marker = L.marker([lat, lon]).addTo(map);
     document.getElementById('lat').value = lat.toFixed(6);
     document.getElementById('lon').value = lon.toFixed(6);
   }
 
-  // If we already have coordinates, show marker
-  if (existingLat !== null && existingLon !== null) {
-    setMarkerAndInputs(existingLat, existingLon);
+  if (existingLat !== null && existingLon !== null) setMarker(existingLat, existingLon);
+
+  map.on('click', e => setMarker(e.latlng.lat, e.latlng.lng));
+
+  document.getElementById('update-map').addEventListener('click', () => {
+    const lat = parseFloat(document.getElementById('lat').value);
+    const lon = parseFloat(document.getElementById('lon').value);
+    if (!isNaN(lat) && !isNaN(lon)) { setMarker(lat, lon); map.setView([lat, lon], 15); }
+  });
+})();
+</script>
+
+<script>
+// ── AI Draft modal ───────────────────────────────────────
+const LOCATION_NAME = {{ location.name | tojson }};
+
+let _aiFieldType   = null;
+let _aiTargetId    = null;
+let _aiExtra       = {};
+let _aiDraftText   = null;
+
+function openAiModal(fieldType, targetId, extra) {
+  _aiFieldType = fieldType;
+  _aiTargetId  = targetId;
+  _aiExtra     = extra || {};
+  _aiDraftText = null;
+
+  document.getElementById('ai-context').value = '';
+  document.getElementById('ai-result-wrap').style.display = 'none';
+  document.getElementById('ai-error').style.display = 'none';
+  document.getElementById('ai-result-text').textContent = '';
+  document.getElementById('ai-modal').style.display = 'flex';
+}
+
+function closeAiModal() {
+  document.getElementById('ai-modal').style.display = 'none';
+}
+
+async function runAiDraft() {
+  const btn    = document.getElementById('ai-generate-btn');
+  const errEl  = document.getElementById('ai-error');
+  const wrap   = document.getElementById('ai-result-wrap');
+  const textEl = document.getElementById('ai-result-text');
+
+  errEl.style.display  = 'none';
+  wrap.style.display   = 'none';
+  btn.textContent      = 'Generating…';
+  btn.disabled         = true;
+
+  const existing = document.getElementById(_aiTargetId)?.value || '';
+
+  try {
+    const res = await fetch('{{ url_for("admin.ai_draft") }}', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        field_type:    _aiFieldType,
+        location_name: LOCATION_NAME,
+        chapter_title: _aiExtra.chapterTitle || '',
+        extra_context: document.getElementById('ai-context').value.trim(),
+        existing_text: existing,
+      }),
+    });
+
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    _aiDraftText           = data.text;
+    textEl.textContent     = data.text;
+    wrap.style.display     = 'block';
+  } catch (e) {
+    errEl.textContent    = e.message || 'Something went wrong. Please try again.';
+    errEl.style.display  = 'block';
+  } finally {
+    btn.textContent = 'Generate';
+    btn.disabled    = false;
   }
+}
 
-  map.on('click', function(e) {
-    const lat = e.latlng.lat;
-    const lon = e.latlng.lng;
-    setMarkerAndInputs(lat, lon);
-  });
-
-  document.getElementById('update-map').addEventListener('click', function() {
-    const latVal = parseFloat(document.getElementById('lat').value);
-    const lonVal = parseFloat(document.getElementById('lon').value);
-    if (!isNaN(latVal) && !isNaN(lonVal)) {
-      setMarkerAndInputs(latVal, lonVal);
-      map.setView([latVal, lonVal], 15);
-    }
-  });
+function applyAiDraft() {
+  if (!_aiDraftText || !_aiTargetId) return;
+  const el = document.getElementById(_aiTargetId);
+  if (el) el.value = _aiDraftText;
+  closeAiModal();
+}
 </script>
 {% endblock %}

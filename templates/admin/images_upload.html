@@ -31,7 +31,10 @@
       <select name="location_id" class="form-control">
         <option value="">-- None --</option>
         {% for loc in locations %}
-          <option value="{{ loc.id }}">{{ loc.name }}</option>
+          <option value="{{ loc.id }}"
+            {% if loc.id == preselected_location_id %}selected{% endif %}>
+            {{ loc.name }}
+          </option>
         {% endfor %}
       </select>
     </div>

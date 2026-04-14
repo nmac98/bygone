@@ -15,8 +15,8 @@ def login():
 
         if user and check_password_hash(user.password, password):
             login_user(user)
-            return redirect(url_for('main.index'))
+            return redirect(url_for('admin.dashboard'))
 
-        return "Invalid username or password"
+        return render_template('login.html', error="Invalid username or password")
 
     return render_template('login.html')

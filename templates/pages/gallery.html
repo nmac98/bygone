@@ -36,15 +36,17 @@
     <section class="image-carousel">
 
     <div class="carousel-stage">
-        <img 
-        id="carousel-image"
-        class="carousel-main-img"
-        onclick="openLightbox()"
-        >
+        <div class="carousel-image-wrap">
+            <img
+            id="carousel-image"
+            class="carousel-main-img"
+            onclick="openLightbox()"
+            >
 
-        <!-- NAV BUTTONS OVER IMAGE -->
-        <button class="carousel-btn prev" onclick="prevImage()">←</button>
-        <button class="carousel-btn next" onclick="nextImage()">→</button>
+            <!-- NAV BUTTONS OVER IMAGE -->
+            <button class="carousel-btn prev" onclick="prevImage()">←</button>
+            <button class="carousel-btn next" onclick="nextImage()">→</button>
+        </div>
 
         <div class="carousel-caption collapsed" id="carousel-caption">
         <div class="caption-header">

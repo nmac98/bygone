@@ -90,20 +90,25 @@ def new_location():
 @admin_bp.route('/location/<location_id>/edit', methods=['GET', 'POST'])
 @admin_required
 def edit_location(location_id):
+    location = Location.query.options(
+        joinedload(Location.chapters)
+            .joinedload(LocationChapter.blocks)
+            .joinedload(ChapterBlock.image_asset)
+            .joinedload(ImageAsset.files),
+        joinedload(Location.supabase_images)
+            .joinedload(LocationImage.image)
+            .joinedload(ImageAsset.files),
+    ).get_or_404(location_id)
 
-    location = Location.query.get_or_404(location_id)
-    
     if request.method == 'POST':
         location.name = request.form['name'].strip()
         location.description = request.form.get('description', '')
 
-        # Lat/lon as optional floats
         lat_raw = request.form.get('lat') or None
         lon_raw = request.form.get('lon') or None
         location.lat = float(lat_raw) if lat_raw else None
         location.lon = float(lon_raw) if lon_raw else None
-    
-        # Themes: comma-separated
+
         themes_raw = request.form.get('themes', '')
         themes = [t.strip() for t in themes_raw.split(',') if t.strip()]
         location.themes = themes
@@ -116,13 +121,21 @@ def edit_location(location_id):
 
         db.session.commit()
         flash("Location updated.", "success")
-        return redirect(url_for('admin.admin_locations'))   
+        return redirect(url_for('admin.edit_location', location_id=location_id))
 
-    # Pre-populate themes as comma-separated string
     themes_text = ', '.join(location.themes or [])
     categories = list(LocationCategory)
+    all_images = ImageAsset.query.order_by(ImageAsset.created_at.desc()).limit(300).all()
+    topics = Topic.query.order_by(Topic.title.asc()).all()
 
-    return render_template('admin/edit_location.html', location=location, themes_text=themes_text, categories=categories)
+    return render_template(
+        'admin/edit_location.html',
+        location=location,
+        themes_text=themes_text,
+        categories=categories,
+        all_images=all_images,
+        topics=topics,
+    )
 
 # delete location requires detaching any related photos and tour/route stops
 
@@ -398,6 +411,7 @@ def images_list():
 @admin_required
 def images_upload():
     locations = Location.query.order_by(Location.name.asc()).all()
+    preselected_location_id = request.args.get("location_id", "")
 
     if request.method == "POST":
         f = request.files.get("file")
@@ -466,9 +480,12 @@ def images_upload():
 
         db.session.commit()
         flash("Uploaded image to Supabase.", "success")
+        if location_id:
+            return redirect(url_for("admin.edit_location", location_id=location_id))
         return redirect(url_for("admin.images_list"))
 
-    return render_template("admin/images_upload.html", locations=locations)
+    return render_template("admin/images_upload.html", locations=locations,
+                           preselected_location_id=preselected_location_id)
 
 @admin_bp.route("/images/<image_id>/attach", methods=["GET", "POST"])
 @admin_required
@@ -653,7 +670,7 @@ def chapter_new(location_id):
         db.session.commit()
 
         flash("Chapter created.", "success")
-        return redirect(url_for("admin.chapter_edit", chapter_id=ch.id))
+        return redirect(url_for("admin.edit_location", location_id=location.id))
 
     return render_template("admin/chapter_new.html", location=location)
 
@@ -705,7 +722,7 @@ def chapter_delete(chapter_id):
     db.session.delete(chapter)
     db.session.commit()
     flash("Chapter deleted.", "success")
-    return redirect(url_for("admin.chapters_for_location", location_id=location_id))
+    return redirect(url_for("admin.edit_location", location_id=location_id))
 
 
 # -----------------------
@@ -756,20 +773,21 @@ def block_new(chapter_id):
         db.session.add(b)
         db.session.commit()
         flash("Block created.", "success")
-        return redirect(url_for("admin.chapter_edit", chapter_id=chapter.id))
+        return redirect(url_for("admin.edit_location", location_id=chapter.location_id))
 
-    return render_template("admin/block_new.html", chapter=chapter, images=images)
+    preset_type = request.args.get("block_type", "")
+    return render_template("admin/block_new.html", chapter=chapter, images=images, preset_type=preset_type)
 
 
 @admin_bp.route("/blocks/<int:block_id>/delete", methods=["POST"])
 @admin_required
 def block_delete(block_id):
     b = ChapterBlock.query.get_or_404(block_id)
-    chapter_id = b.chapter_id
+    location_id = b.chapter.location_id
     db.session.delete(b)
     db.session.commit()
     flash("Block deleted.", "success")
-    return redirect(url_for("admin.chapter_edit", chapter_id=chapter_id))
+    return redirect(url_for("admin.edit_location", location_id=location_id))
 
 
 # -----------------------
@@ -848,15 +866,74 @@ def chapter_topic_attach(chapter_id):
     db.session.add(ct)
     db.session.commit()
     flash("Topic attached.", "success")
-    return redirect(url_for("admin.chapter_edit", chapter_id=chapter.id))
+    return redirect(url_for("admin.edit_location", location_id=chapter.location_id))
+
+
+@admin_bp.route("/ai/draft", methods=["POST"])
+@admin_required
+def ai_draft():
+    import anthropic
+    data = request.get_json()
+    field_type      = (data or {}).get("field_type", "")
+    location_name   = (data or {}).get("location_name", "")
+    chapter_title   = (data or {}).get("chapter_title", "")
+    extra_context   = (data or {}).get("extra_context", "")
+    existing_text   = (data or {}).get("existing_text", "")
+
+    def ctx(lines):
+        return "\n".join(l for l in lines if l.strip())
+
+    if field_type == "location_description":
+        prompt = ctx([
+            f'Write a 2–3 sentence overview description of "{location_name}", a Dublin heritage location, for visitors using a history app.',
+            "Be engaging, factual, and concise. Write in the present tense.",
+            f"Additional context: {extra_context}" if extra_context else "",
+            f"Improve on this existing draft: {existing_text}" if existing_text else "",
+            "Reply with the description only — no preamble, no quotes.",
+        ])
+    elif field_type == "chapter_summary":
+        prompt = ctx([
+            f'Write a 1–2 sentence intro summary for a history chapter titled "{chapter_title}" about {location_name} in Dublin.',
+            "It appears in italics at the top of the chapter as a brief orientation for the reader.",
+            f"Additional context: {extra_context}" if extra_context else "",
+            "Reply with the summary only — no preamble, no quotes.",
+        ])
+    elif field_type == "text_block":
+        prompt = ctx([
+            f'Write a paragraph of historical content for a chapter titled "{chapter_title}" about {location_name} in Dublin.',
+            "Audience: curious visitors using a heritage app. Be accurate, vivid, and accessible. 3–5 sentences.",
+            f"Focus on: {extra_context}" if extra_context else "",
+            f"Expand or improve on this draft: {existing_text}" if existing_text else "",
+            "Reply with the paragraph only — no preamble, no quotes.",
+        ])
+    else:
+        return {"error": "Unknown field type."}, 400
+
+    client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    message = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=500,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return {"text": message.content[0].text.strip()}
 
 
 @admin_bp.route("/chapter-topics/<int:ct_id>/delete", methods=["POST"])
 @admin_required
 def chapter_topic_delete(ct_id):
     ct = ChapterTopic.query.get_or_404(ct_id)
-    chapter_id = ct.chapter_id
+    location_id = ct.chapter.location_id
     db.session.delete(ct)
     db.session.commit()
     flash("Topic removed.", "success")
-    return redirect(url_for("admin.chapter_edit", chapter_id=chapter_id))
+    return redirect(url_for("admin.edit_location", location_id=location_id))
+
+
+@admin_bp.route("/location/<location_id>/images/<image_id>/detach", methods=["POST"])
+@admin_required
+def location_image_detach(location_id, image_id):
+    link = LocationImage.query.filter_by(location_id=location_id, image_id=image_id).first_or_404()
+    db.session.delete(link)
+    db.session.commit()
+    flash("Photo removed from location.", "success")
+    return redirect(url_for("admin.edit_location", location_id=location_id))

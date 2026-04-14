@@ -3,85 +3,187 @@
 
 {% block content %}
 <div class="admin-container">
-  <h1>New Block</h1>
-  <p class="text-muted">
-    Chapter: <strong>{{ chapter.title }}</strong>
-    (Location: {{ chapter.location.name }})
+  <p class="admin-breadcrumb">
+    <a href="{{ url_for('admin.admin_locations') }}">Locations</a> /
+    <a href="{{ url_for('admin.edit_location', location_id=chapter.location_id) }}">{{ chapter.location.name }}</a> /
+    {{ chapter.title }} / New Block
   </p>
 
+  <h1 class="admin-page-title">Add Block</h1>
+
   <form method="POST">
-    <div class="form-group">
-      <label>Block Type *</label>
-      <select class="form-control" name="block_type" required>
-        <option value="text">text</option>
-        <option value="image">image</option>
-        <option value="link">link</option>
-        <option value="divider">divider</option>
-      </select>
+    <div class="admin-card">
+      <div class="admin-field">
+        <label class="admin-label">Block Type</label>
+        <div class="block-type-tabs">
+          {% for t in ['text', 'image', 'link', 'divider'] %}
+          <label class="block-type-tab">
+            <input type="radio" name="block_type" value="{{ t }}"
+              {% if t == preset_type %}checked{% elif not preset_type and t == 'text' %}checked{% endif %}
+              onchange="showBlockFields(this.value)">
+            <span>{{ t|capitalize }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div id="fields-text" class="block-fields">
+        <div class="admin-field">
+          <div class="admin-label-row">
+            <label class="admin-label">Content</label>
+            <button type="button" class="ai-draft-btn"
+              onclick="openAiModal('text_block', 'block-body')">✦ Draft with AI</button>
+          </div>
+          <textarea class="admin-input" name="body" id="block-body" rows="8"
+                    placeholder="Write the text content for this block..."></textarea>
+        </div>
+      </div>
+
+      <div id="fields-image" class="block-fields" style="display:none">
+        <div class="admin-field">
+          <label class="admin-label">Image</label>
+          <select class="admin-input" name="image_asset_id">
+            <option value="">— select an image —</option>
+            {% for img in images %}
+            <option value="{{ img.id }}">{{ img.title or '(untitled)' }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="admin-field">
+          <label class="admin-label">Caption override <span class="admin-optional">(optional)</span></label>
+          <input class="admin-input" type="text" name="caption_override"
+                 placeholder="Defaults to image title if blank">
+        </div>
+      </div>
+
+      <div id="fields-link" class="block-fields" style="display:none">
+        <div class="admin-field">
+          <label class="admin-label">Link label</label>
+          <input class="admin-input" type="text" name="link_label" placeholder="e.g. Read more on Wikipedia">
+        </div>
+        <div class="admin-field">
+          <label class="admin-label">URL</label>
+          <input class="admin-input" type="text" name="link_url" placeholder="https://...">
+        </div>
+        <div class="admin-field">
+          <label class="admin-label">Note <span class="admin-optional">(optional)</span></label>
+          <input class="admin-input" type="text" name="link_note" placeholder="Short context for the link">
+        </div>
+      </div>
+
+      <div id="fields-divider" class="block-fields" style="display:none">
+        <p class="admin-hint">A horizontal rule will be inserted — no additional fields needed.</p>
+      </div>
+
+      <div class="admin-field">
+        <label class="admin-label">Sort order</label>
+        <input class="admin-input admin-input--short" type="number" name="sort_order" value="0">
+        <p class="admin-hint">Lower numbers appear first within the chapter.</p>
+      </div>
     </div>
 
-    <div class="form-group">
-      <label>Sort Order</label>
-      <input class="form-control" type="number" name="sort_order" value="0">
-      <small class="text-muted">Lower numbers appear first inside the chapter.</small>
-    </div>
-
-    <hr>
-
-    <h3>Text</h3>
-    <div class="form-group">
-      <label>Body</label>
-      <textarea class="form-control" name="body" rows="6"
-                placeholder="Text shown in the chapter..."></textarea>
-    </div>
-
-    <hr>
-
-    <h3>Image</h3>
-    <div class="form-group">
-      <label>Choose Image (optional for other block types)</label>
-      <select class="form-control" name="image_asset_id">
-        <option value="">-- none --</option>
-        {% for img in images %}
-          <option value="{{ img.id }}">
-            {{ img.title or '(untitled)' }} — {{ img.id }}
-          </option>
-        {% endfor %}
-      </select>
-      <small class="text-muted">You can search/pick better later; this is a starter picker.</small>
-    </div>
-
-    <div class="form-group">
-      <label>Caption override (optional)</label>
-      <input class="form-control" type="text" name="caption_override"
-             placeholder="If blank, will use image title.">
-    </div>
-
-    <hr>
-
-    <h3>Link</h3>
-    <div class="form-group">
-      <label>Link Label</label>
-      <input class="form-control" type="text" name="link_label" placeholder="Read more...">
-    </div>
-
-    <div class="form-group">
-      <label>Link URL</label>
-      <input class="form-control" type="text" name="link_url" placeholder="https://...">
-    </div>
-
-    <div class="form-group">
-      <label>Link Note (optional)</label>
-      <input class="form-control" type="text" name="link_note" placeholder="Short context for the link...">
-    </div>
-
-    <div style="margin-top: 1rem;">
-      <button class="btn btn-primary" type="submit">Create Block</button>
-      <a class="btn btn-secondary"
-         href="{{ url_for('admin.chapter_edit', chapter_id=chapter.id) }}">
-        Cancel
-      </a>
+    <div class="admin-actions">
+      <button class="admin-btn admin-btn--primary" type="submit">Add block</button>
+      <a class="admin-btn admin-btn--ghost"
+         href="{{ url_for('admin.edit_location', location_id=chapter.location_id) }}">Cancel</a>
     </div>
   </form>
 </div>
+
+<script>
+function showBlockFields(type) {
+  ['text','image','link','divider'].forEach(t => {
+    document.getElementById('fields-' + t).style.display = t === type ? '' : 'none';
+  });
+}
+showBlockFields('{{ preset_type or "text" }}');
+</script>
+
+<!-- AI Draft modal -->
+<div id="ai-modal" class="ai-modal-backdrop" style="display:none" onclick="if(event.target===this)closeAiModal()">
+  <div class="ai-modal">
+    <div class="ai-modal-header">
+      <span class="ai-modal-title">✦ Draft with AI</span>
+      <button class="ai-modal-close" onclick="closeAiModal()">✕</button>
+    </div>
+    <div class="ai-modal-body">
+      <div class="admin-field">
+        <label class="admin-label">Guidance <span class="admin-optional">(optional)</span></label>
+        <textarea id="ai-context" class="admin-input" rows="3"
+          placeholder="e.g. Focus on the founding year, mention the architect…"></textarea>
+      </div>
+      <button id="ai-generate-btn" class="admin-btn admin-btn--primary" onclick="runAiDraft()">Generate</button>
+      <div id="ai-result-wrap" style="display:none">
+        <div class="ai-result-box" id="ai-result-text"></div>
+        <div class="ai-result-actions">
+          <button class="admin-btn admin-btn--primary admin-btn--sm" onclick="applyAiDraft()">Use this</button>
+          <button class="admin-btn admin-btn--ghost admin-btn--sm" onclick="runAiDraft()">Regenerate</button>
+        </div>
+      </div>
+      <div id="ai-error" class="ai-error" style="display:none"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const LOCATION_NAME = {{ chapter.location.name | tojson }};
+const CHAPTER_TITLE = {{ chapter.title | tojson }};
+let _aiTargetId = null, _aiDraftText = null;
+
+function openAiModal(fieldType, targetId) {
+  _aiTargetId = targetId;
+  _aiDraftText = null;
+  document.getElementById('ai-context').value = '';
+  document.getElementById('ai-result-wrap').style.display = 'none';
+  document.getElementById('ai-error').style.display = 'none';
+  document.getElementById('ai-result-text').textContent = '';
+  document.getElementById('ai-modal').style.display = 'flex';
+}
+
+function closeAiModal() {
+  document.getElementById('ai-modal').style.display = 'none';
+}
+
+async function runAiDraft() {
+  const btn = document.getElementById('ai-generate-btn');
+  const errEl = document.getElementById('ai-error');
+  const wrap = document.getElementById('ai-result-wrap');
+  const textEl = document.getElementById('ai-result-text');
+  errEl.style.display = 'none';
+  wrap.style.display = 'none';
+  btn.textContent = 'Generating…';
+  btn.disabled = true;
+  try {
+    const res = await fetch('{{ url_for("admin.ai_draft") }}', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        field_type: 'text_block',
+        location_name: LOCATION_NAME,
+        chapter_title: CHAPTER_TITLE,
+        extra_context: document.getElementById('ai-context').value.trim(),
+        existing_text: document.getElementById(_aiTargetId)?.value || '',
+      }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    _aiDraftText = data.text;
+    textEl.textContent = data.text;
+    wrap.style.display = 'block';
+  } catch (e) {
+    errEl.textContent = e.message || 'Something went wrong.';
+    errEl.style.display = 'block';
+  } finally {
+    btn.textContent = 'Generate';
+    btn.disabled = false;
+  }
+}
+
+function applyAiDraft() {
+  if (!_aiDraftText || !_aiTargetId) return;
+  const el = document.getElementById(_aiTargetId);
+  if (el) el.value = _aiDraftText;
+  closeAiModal();
+}
+</script>
 {% endblock %}
