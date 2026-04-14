@@ -133,8 +133,10 @@ def analyze_plaque():
                     "text": (
                         "This is a photo of a historical plaque, likely found on a building or monument in Dublin, Ireland. "
                         "Identify who or what is commemorated and provide a concise historical summary. "
+                        "If the subject is an artist (painter, sculptor, writer, composer, etc.), also list up to 3 of their most notable works as exact titles suitable for a Wikipedia search. "
                         "Respond with a JSON object only, no markdown:\n"
-                        "{\"name\": \"Name of person or event\", \"summary\": \"2-3 sentence historical summary\"}\n"
+                        "{\"name\": \"Name of person or event\", \"summary\": \"2-3 sentence historical summary\", \"works\": [\"Work Title 1\", \"Work Title 2\"]}\n"
+                        "If the subject is not an artist, omit the works field or set it to an empty array. "
                         "If you cannot identify a plaque or read its text clearly, respond with:\n"
                         "{\"error\": \"Could not read the plaque clearly. Please try again with a closer, clearer photo.\"}"
                     )

@@ -34,6 +34,13 @@
   <div class="plaque-result-body">
     <h2 id="plaque-result-name" class="plaque-result-name"></h2>
     <p id="plaque-result-summary" class="plaque-result-summary"></p>
+    <div id="plaque-works-section" class="plaque-works-section" style="display:none">
+      <h3 class="plaque-works-title">Notable works</h3>
+      <div id="plaque-works-grid" class="plaque-works-grid"></div>
+    </div>
+    <a id="plaque-wiki-link" class="plaque-wiki-link" href="#" target="_blank" rel="noopener" style="display:none">
+      Read more on Wikipedia →
+    </a>
     <button class="sheet-btn plaque-result-btn" onclick="resetPlaques()">Scan another</button>
   </div>
 </div> <!-- end .plaques-page -->
@@ -88,7 +95,66 @@
     document.getElementById('plaque-result-name').textContent = data.name || '';
     document.getElementById('plaque-result-summary').textContent = data.summary || '';
 
+    const worksSection = document.getElementById('plaque-works-section');
+    const worksGrid = document.getElementById('plaque-works-grid');
+    worksGrid.innerHTML = '';
+    worksSection.style.display = 'none';
+
+    if (data.works && data.works.length > 0) {
+      worksSection.style.display = 'block';
+      data.works.forEach(title => fetchWorkCard(title, worksGrid));
+    }
+
+    const wikiLink = document.getElementById('plaque-wiki-link');
+    wikiLink.style.display = 'none';
+    if (data.name) fetchWikipediaLink(data.name, wikiLink);
+
     document.getElementById('plaques-result').classList.add('active');
+  }
+
+  async function fetchWikipediaLink(name, linkEl) {
+    try {
+      const res = await fetch(
+        'https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(name),
+        { headers: { 'Accept': 'application/json' } }
+      );
+      if (!res.ok) return;
+      const data = await res.json();
+      const url = data.content_urls?.desktop?.page;
+      if (url) {
+        linkEl.href = url;
+        linkEl.style.display = 'inline-block';
+      }
+    } catch { /* no link if lookup fails */ }
+  }
+
+  async function fetchWorkCard(title, container) {
+    const card = document.createElement('div');
+    card.className = 'plaque-work-card plaque-work-card--loading';
+    card.innerHTML = '<div class="plaque-work-thumb-placeholder"></div><span class="plaque-work-label">' + title + '</span>';
+    container.appendChild(card);
+
+    try {
+      const res = await fetch(
+        'https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(title),
+        { headers: { 'Accept': 'application/json' } }
+      );
+      const data = await res.json();
+      const thumb = data.thumbnail?.source;
+
+      card.classList.remove('plaque-work-card--loading');
+      if (thumb) {
+        card.innerHTML =
+          '<img class="plaque-work-thumb" src="' + thumb + '" alt="' + title + '">' +
+          '<span class="plaque-work-label">' + title + '</span>';
+      } else {
+        card.innerHTML =
+          '<div class="plaque-work-thumb-placeholder"></div>' +
+          '<span class="plaque-work-label">' + title + '</span>';
+      }
+    } catch {
+      card.classList.remove('plaque-work-card--loading');
+    }
   }
 
   function resetPlaques() {
