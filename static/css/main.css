@@ -380,8 +380,6 @@ html, body {
     display: none;
     flex-direction: column;
     width: 100%;
-    min-height: calc(100vh - 60px);
-    overflow-y: auto;
 }
 
 .plaques-result.active {
