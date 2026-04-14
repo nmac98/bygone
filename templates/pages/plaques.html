@@ -30,24 +30,15 @@
 
 </div>
 
-<!-- Result sheet (reuses map sheet styles) -->
-<div id="plaque-sheet" class="location-sheet">
-  <div class="sheet-drag-handle"></div>
-  <div class="sheet-inner">
-    <div id="plaque-image-wrap" class="sheet-image-wrap">
-      <img id="plaque-sheet-img" class="sheet-img" src="" alt="">
-    </div>
-    <div class="sheet-body">
-      <h2 id="plaque-sheet-name" class="sheet-name"></h2>
-      <p id="plaque-sheet-summary" class="sheet-description sheet-description--full"></p>
-      <div class="sheet-actions">
-        <button class="sheet-btn" onclick="resetPlaques()">Scan another</button>
-      </div>
-    </div>
-    <button class="sheet-close" onclick="closePlaqueSheet()" aria-label="Close">✕</button>
+<!-- Full-page result -->
+<div id="plaques-result" class="plaques-result">
+  <img id="plaque-result-img" class="plaque-result-img" src="" alt="">
+  <div class="plaque-result-body">
+    <h2 id="plaque-result-name" class="plaque-result-name"></h2>
+    <p id="plaque-result-summary" class="plaque-result-summary"></p>
+    <button class="sheet-btn plaque-result-btn" onclick="resetPlaques()">Scan another</button>
   </div>
 </div>
-<div id="plaque-backdrop" class="sheet-backdrop" onclick="closePlaqueSheet()"></div>
 
 <script>
   const input = document.getElementById('plaque-input');
@@ -94,23 +85,16 @@
 
   function showResult(file, data) {
     document.getElementById('plaques-loading').classList.remove('active');
-    document.getElementById('plaques-prompt').classList.add('active');
 
-    document.getElementById('plaque-sheet-img').src = URL.createObjectURL(file);
-    document.getElementById('plaque-sheet-name').textContent = data.name || '';
-    document.getElementById('plaque-sheet-summary').textContent = data.summary || '';
+    document.getElementById('plaque-result-img').src = URL.createObjectURL(file);
+    document.getElementById('plaque-result-name').textContent = data.name || '';
+    document.getElementById('plaque-result-summary').textContent = data.summary || '';
 
-    document.getElementById('plaque-sheet').classList.add('active');
-    document.getElementById('plaque-backdrop').classList.add('active');
-  }
-
-  function closePlaqueSheet() {
-    document.getElementById('plaque-sheet').classList.remove('active');
-    document.getElementById('plaque-backdrop').classList.remove('active');
+    document.getElementById('plaques-result').classList.add('active');
   }
 
   function resetPlaques() {
-    closePlaqueSheet();
+    document.getElementById('plaques-result').classList.remove('active');
     document.getElementById('plaques-error').classList.remove('active');
     document.getElementById('plaques-prompt').classList.add('active');
     document.getElementById('plaque-input').value = '';
