@@ -2,45 +2,46 @@
 {% block title %}Admin | Edit People Block{% endblock %}
 
 {% block content %}
-<div class="admin-container">
-  <p class="admin-breadcrumb">
-    <a href="{{ url_for('admin.admin_locations') }}">Locations</a> /
-    <a href="{{ url_for('admin.edit_location', location_id=chapter.location_id) }}">{{ chapter.location.name }}</a> /
-    {{ chapter.title }} / People block
-  </p>
+<div class="editor-wrap">
 
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-    <h1 class="admin-page-title" style="margin:0;">People cards</h1>
-    <button type="button" class="ai-draft-btn" onclick="generatePeople()">✦ Regenerate with AI</button>
+  <div class="editor-header">
+    <a href="{{ url_for('admin.edit_location', location_id=chapter.location_id) }}" class="editor-back">
+      ← {{ chapter.location.name }}
+    </a>
+    <span class="editor-header-title">{{ chapter.title }} — People cards</span>
+    <div style="display:flex;gap:8px;">
+      <button class="admin-btn admin-btn--ghost admin-btn--sm" id="save-btn" onclick="saveAll()">
+        Save all
+      </button>
+      <button class="ai-draft-btn" onclick="generatePeople()">✦ Generate with AI</button>
+    </div>
   </div>
-  <p class="admin-hint" style="margin-bottom:16px;">
-    Edit names, dates, roles and summaries. Click <strong>Fetch image</strong> to auto-load a Wikipedia photo, or paste a custom URL.
-  </p>
-  <div id="people-ai-status" class="admin-hint" style="margin-bottom:12px;display:none;"></div>
 
-  <form method="POST" onsubmit="return syncAndSubmit()">
-    <div id="people-list" class="people-editor-list">
-      <!-- populated by JS from existing data -->
-    </div>
+  <div id="status-bar" class="editor-flash-wrap" style="display:none;">
+    <div id="status-msg" class="editor-flash"></div>
+  </div>
 
-    <div style="margin-top:12px;display:flex;gap:8px;">
-      <button type="button" class="admin-btn admin-btn--ghost admin-btn--sm"
-              onclick="addPersonCard({})">+ Add person</button>
-    </div>
+  <div style="padding:16px 20px 8px;">
+    <p class="admin-hint">
+      Edit cards below. Click <strong>Fetch image</strong> to auto-load a Wikipedia photo by name,
+      or paste any image URL. Hit <strong>Save all</strong> when done.
+    </p>
+  </div>
 
-    <input type="hidden" name="body" id="people-json">
+  <div id="people-list" class="people-editor-list" style="padding:0 20px;"></div>
 
-    <div class="admin-actions" style="margin-top:24px;">
-      <button class="admin-btn admin-btn--primary" type="submit">Save people block</button>
-      <a class="admin-btn admin-btn--ghost"
-         href="{{ url_for('admin.edit_location', location_id=chapter.location_id) }}">Cancel</a>
-    </div>
-  </form>
+  <div style="padding:12px 20px 32px;display:flex;gap:8px;align-items:center;">
+    <button type="button" class="admin-btn admin-btn--ghost admin-btn--sm"
+            onclick="addPersonCard({})">+ Add person</button>
+    <span id="save-status" class="dialogue-save-status"></span>
+  </div>
+
 </div>
 
 <script>
 const LOCATION_NAME = {{ chapter.location.name | tojson }};
 const CHAPTER_TITLE = {{ chapter.title | tojson }};
+const SAVE_URL = {{ url_for('admin.block_people_edit', block_id=block.id) | tojson }};
 const EXISTING_PEOPLE = {{ people | tojson }};
 
 let _peopleCounter = 0;
@@ -50,60 +51,73 @@ function addPersonCard(data) {
   const card = document.createElement('div');
   card.className = 'people-editor-card';
   card.dataset.index = i;
+
+  const imgUrl = (data.img_url || '').replace(/"/g, '&quot;');
+  const hasImg = !!data.img_url;
+
   card.innerHTML = `
     <div class="people-editor-card-top">
       <div class="people-editor-img-wrap">
         <div class="people-editor-img-preview" id="img-preview-${i}">
-          ${data.img_url ? `<img src="${data.img_url}" alt="">` : '<span class="people-editor-img-placeholder">No image</span>'}
+          ${hasImg
+            ? `<img src="${imgUrl}" alt="">`
+            : '<span class="people-editor-img-placeholder">No image</span>'}
         </div>
         <div class="people-editor-img-actions">
           <button type="button" class="admin-btn admin-btn--ghost admin-btn--xs"
             onclick="fetchWikiImage(${i})">Fetch image</button>
           <button type="button" class="admin-btn admin-btn--ghost admin-btn--xs"
-            onclick="document.getElementById('img-url-${i}').style.display='block'">Custom URL</button>
+            onclick="toggleImgInput(${i})">Custom URL</button>
         </div>
         <input type="text" id="img-url-${i}" class="admin-input" placeholder="Image URL"
-          value="${data.img_url || ''}"
-          style="display:${data.img_url ? 'block' : 'none'}; margin-top:6px; font-size:0.75rem;"
+          value="${imgUrl}"
+          style="display:${hasImg ? 'block' : 'none'}; margin-top:6px; font-size:0.75rem;"
           oninput="updateImgPreview(${i})">
       </div>
       <div class="people-editor-fields">
         <input class="admin-input people-field-name" type="text" placeholder="Full name *"
-          value="${escHtml(data.name || '')}" required>
+          value="${esc(data.name || '')}">
         <div style="display:flex;gap:8px;">
           <input class="admin-input people-field-dates" type="text" placeholder="Dates (e.g. 1906–1989)"
-            value="${escHtml(data.dates || '')}" style="flex:1">
+            value="${esc(data.dates || '')}" style="flex:1">
           <input class="admin-input people-field-role" type="text" placeholder="Role / profession"
-            value="${escHtml(data.role || '')}" style="flex:2">
+            value="${esc(data.role || '')}" style="flex:2">
         </div>
         <textarea class="admin-input people-field-summary" rows="2"
-          placeholder="2–3 sentence summary...">${escHtml(data.summary || '')}</textarea>
+          placeholder="2–3 sentence summary...">${esc(data.summary || '')}</textarea>
       </div>
-      <button type="button" class="people-editor-remove" onclick="this.closest('.people-editor-card').remove()"
-        title="Remove">✕</button>
+      <button type="button" class="people-editor-remove"
+        onclick="this.closest('.people-editor-card').remove()" title="Remove">✕</button>
     </div>
   `;
   document.getElementById('people-list').appendChild(card);
 }
 
-function escHtml(str) {
-  return str.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function esc(str) {
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/"/g,'&quot;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;');
+}
+
+function toggleImgInput(i) {
+  const el = document.getElementById('img-url-' + i);
+  el.style.display = el.style.display === 'none' ? 'block' : el.style.display;
+  el.focus();
 }
 
 function updateImgPreview(i) {
   const url = document.getElementById('img-url-' + i).value.trim();
   const preview = document.getElementById('img-preview-' + i);
-  if (url) {
-    preview.innerHTML = `<img src="${url}" alt="" onerror="this.style.display='none'">`;
-  } else {
-    preview.innerHTML = '<span class="people-editor-img-placeholder">No image</span>';
-  }
+  preview.innerHTML = url
+    ? `<img src="${url}" alt="" onerror="this.style.display='none'">`
+    : '<span class="people-editor-img-placeholder">No image</span>';
 }
 
 async function fetchWikiImage(i) {
   const card = document.querySelector(`[data-index="${i}"]`);
-  const nameEl = card.querySelector('.people-field-name');
-  const name = nameEl.value.trim();
+  const name = card.querySelector('.people-field-name').value.trim();
   if (!name) { alert('Enter a name first.'); return; }
   try {
     const res = await fetch(
@@ -113,40 +127,60 @@ async function fetchWikiImage(i) {
     const data = await res.json();
     const thumb = data.thumbnail?.source;
     if (thumb) {
-      document.getElementById('img-url-' + i).value = thumb;
-      document.getElementById('img-url-' + i).style.display = 'block';
+      const input = document.getElementById('img-url-' + i);
+      input.value = thumb;
+      input.style.display = 'block';
       updateImgPreview(i);
     } else {
       alert('No Wikipedia image found for "' + name + '".');
     }
-  } catch { alert('Could not fetch from Wikipedia.'); }
+  } catch { alert('Could not reach Wikipedia.'); }
 }
 
-function syncPeopleJson() {
-  const cards = document.querySelectorAll('.people-editor-card');
-  const people = Array.from(cards).map(card => ({
+function collectPeople() {
+  return Array.from(document.querySelectorAll('.people-editor-card')).map(card => ({
     name:    card.querySelector('.people-field-name').value.trim(),
     dates:   card.querySelector('.people-field-dates').value.trim(),
     role:    card.querySelector('.people-field-role').value.trim(),
     summary: card.querySelector('.people-field-summary').value.trim(),
     img_url: card.querySelector('[id^="img-url-"]').value.trim(),
   })).filter(p => p.name);
-  document.getElementById('people-json').value = JSON.stringify(people);
-  return people.length > 0;
 }
 
-function syncAndSubmit() {
-  if (!syncPeopleJson()) {
-    alert('Add at least one person before saving.');
-    return false;
+async function saveAll() {
+  const btn      = document.getElementById('save-btn');
+  const statusEl = document.getElementById('save-status');
+  btn.textContent = 'Saving…';
+  btn.disabled    = true;
+  statusEl.textContent = '';
+
+  const people = collectPeople();
+
+  try {
+    const res = await fetch(SAVE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ people }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error('Save failed');
+    statusEl.textContent = '✓ Saved';
+    setTimeout(() => { statusEl.textContent = ''; }, 2500);
+  } catch (e) {
+    statusEl.textContent = '✗ Error saving';
+  } finally {
+    btn.textContent = 'Save all';
+    btn.disabled    = false;
   }
-  return true;
 }
 
 async function generatePeople() {
-  const statusEl = document.getElementById('people-ai-status');
-  statusEl.style.display = 'block';
-  statusEl.textContent = '⏳ Generating people cards…';
+  const statusBar = document.getElementById('status-bar');
+  const statusMsg = document.getElementById('status-msg');
+  statusBar.style.display = 'block';
+  statusMsg.className = 'editor-flash editor-flash--info';
+  statusMsg.textContent = '⏳ Generating people cards…';
+
   try {
     const res = await fetch('{{ url_for("admin.ai_draft") }}', {
       method: 'POST',
@@ -160,16 +194,20 @@ async function generatePeople() {
     });
     const data = await res.json();
     if (data.error) throw new Error(data.error);
+
     document.getElementById('people-list').innerHTML = '';
     _peopleCounter = 0;
     data.people.forEach(p => addPersonCard(p));
-    statusEl.textContent = `✓ Generated ${data.people.length} people — review and fetch images below.`;
+
+    statusMsg.className = 'editor-flash editor-flash--success';
+    statusMsg.textContent = `✓ Generated ${data.people.length} people — review images and hit Save all.`;
   } catch (e) {
-    statusEl.textContent = '✗ ' + (e.message || 'Something went wrong.');
+    statusMsg.className = 'editor-flash editor-flash--error';
+    statusMsg.textContent = '✗ ' + (e.message || 'Something went wrong.');
   }
 }
 
-// Populate from existing data
+// Load existing data
 EXISTING_PEOPLE.forEach(p => addPersonCard(p));
 </script>
 {% endblock %}

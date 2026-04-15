@@ -831,16 +831,22 @@ def block_people_edit(block_id):
     ).get_or_404(block_id)
 
     if request.method == "POST":
-        body = (request.form.get("body") or "").strip()
-        try:
-            people = _json.loads(body)
-            if not isinstance(people, list):
-                raise ValueError
-        except Exception:
-            flash("Invalid people data.", "error")
-            return redirect(request.url)
+        # Support both AJAX (JSON body) and form POST
+        if request.is_json:
+            payload = request.get_json() or {}
+            people = payload.get("people", [])
+        else:
+            body = (request.form.get("body") or "").strip()
+            try:
+                people = _json.loads(body)
+            except Exception:
+                people = []
+        if not isinstance(people, list):
+            people = []
         b.body = _json.dumps(people)
         db.session.commit()
+        if request.is_json:
+            return {"ok": True}
         flash("People block saved.", "success")
         return redirect(url_for("admin.edit_location", location_id=b.chapter.location_id))
 
