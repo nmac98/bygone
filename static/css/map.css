@@ -88,9 +88,15 @@ landing-map-section{
 
 .sheet-image-wrap {
     width: 100%;
-    height: 180px;
+    height: 160px;
     flex-shrink: 0;
     overflow: hidden;
+}
+
+@media (max-height: 680px) {
+    .sheet-image-wrap {
+        height: 120px;
+    }
 }
 
 .sheet-img {
@@ -103,6 +109,8 @@ landing-map-section{
 .sheet-body {
     padding: 16px 18px 20px;
     overflow-y: auto;
+    flex: 1;
+    min-height: 0;
 }
 
 .sheet-date {
