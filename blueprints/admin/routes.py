@@ -256,6 +256,24 @@ def delete_route(route_id):
 
     return render_template('admin/route_delete.html', route=route)
 
+@admin_bp.route('/route/<route_id>/dialogue')
+@admin_required
+def route_dialogue(route_id):
+    route = Route.query.get_or_404(route_id)
+    stops = (
+        RouteStop.query
+        .filter_by(route_id=route_id)
+        .options(
+            joinedload(RouteStop.location)
+                .joinedload(Location.chapters)
+                .joinedload(LocationChapter.blocks)
+        )
+        .order_by(RouteStop.order)
+        .all()
+    )
+    return render_template('admin/route_dialogue.html', route=route, stops=stops)
+
+
 @admin_bp.route('/route/<route_id>/stops')
 @admin_required
 def manage_stops(route_id):
@@ -905,6 +923,22 @@ def ai_draft():
             f"Focus on: {extra_context}" if extra_context else "",
             f"Expand or improve on this draft: {existing_text}" if existing_text else "",
             "Reply with the paragraph only — no preamble, no quotes.",
+        ])
+    elif field_type == "stop_dialogue":
+        route_name   = (data or {}).get("route_name", "")
+        stop_number  = (data or {}).get("stop_number", "")
+        chapters     = (data or {}).get("chapters", [])
+        chapter_ctx  = "; ".join(chapters) if chapters else ""
+        prompt = ctx([
+            f'You are writing the tour guide script for stop {stop_number} of a walking tour called "{route_name}" in Dublin, Ireland.',
+            f'The stop is at "{location_name}".',
+            f'Location overview: {extra_context}' if extra_context else "",
+            f'History chapters covered here: {chapter_ctx}' if chapter_ctx else "",
+            "Write 2–3 short paragraphs of engaging, spoken tour guide dialogue — warm, vivid, and informative.",
+            "Write as if a knowledgeable local guide is speaking directly to a small group of visitors standing at the location.",
+            "Do not use headings or bullet points. Write flowing prose only.",
+            f"Improve on this existing draft: {existing_text}" if existing_text else "",
+            "Reply with the dialogue only — no preamble, no quotes.",
         ])
     else:
         return {"error": "Unknown field type."}, 400

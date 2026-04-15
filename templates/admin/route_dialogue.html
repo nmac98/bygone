@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+{% block title %}Admin | {{ route.name }} — Dialogue{% endblock %}
+
+{% block content %}
+<div class="editor-wrap">
+
+  <!-- Header -->
+  <div class="editor-header">
+    <a href="{{ url_for('admin.manage_stops', route_id=route.id) }}" class="editor-back">← Stops</a>
+    <span class="editor-header-title">{{ route.name }} — Dialogue</span>
+    <button class="admin-btn admin-btn--primary admin-btn--sm" id="draft-all-btn" onclick="draftAll()">
+      ✦ Draft all with AI
+    </button>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="editor-flash-wrap">
+        {% for cat, msg in messages %}
+          <div class="editor-flash editor-flash--{{ cat }}">{{ msg }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  {% if stops %}
+  <div class="dialogue-stop-list">
+    {% for stop in stops %}
+    {% set loc = stop.location %}
+    <div class="dialogue-stop-card" id="stop-card-{{ stop.id }}">
+
+      <!-- Stop header -->
+      <div class="dialogue-stop-header">
+        <div class="dialogue-stop-number">{{ stop.order }}</div>
+        <div class="dialogue-stop-info">
+          <span class="dialogue-stop-name">{{ loc.name }}</span>
+          <span class="dialogue-stop-category">{{ loc.category.value if loc.category else '' }}</span>
+        </div>
+        <button type="button" class="ai-draft-btn"
+          onclick="draftStop({{ stop.id }}, {{ loop.index }})">
+          ✦ Draft with AI
+        </button>
+      </div>
+
+      <!-- Collapsible location context -->
+      {% if loc.description or loc.chapters %}
+      <details class="dialogue-context">
+        <summary class="dialogue-context-summary">Location context</summary>
+        <div class="dialogue-context-body">
+          {% if loc.description %}
+          <p class="dialogue-context-desc">{{ loc.description }}</p>
+          {% endif %}
+          {% if loc.chapters %}
+          <ul class="dialogue-context-chapters">
+            {% for ch in (loc.chapters | sort(attribute='sort_order')) %}
+            <li>{{ ch.title }}{% if ch.summary %} — <em>{{ ch.summary }}</em>{% endif %}</li>
+            {% endfor %}
+          </ul>
+          {% endif %}
+        </div>
+      </details>
+      {% endif %}
+
+      <!-- Dialogue form -->
+      <form method="POST" action="{{ url_for('admin.edit_stop', stop_id=stop.id) }}"
+            class="dialogue-form">
+        <input type="hidden" name="location_id" value="{{ loc.id }}">
+        <input type="hidden" name="order" value="{{ stop.order }}">
+        <textarea
+          class="admin-input dialogue-textarea"
+          name="dialogue"
+          id="dialogue-{{ stop.id }}"
+          rows="6"
+          placeholder="Write the tour guide dialogue for this stop…">{{ stop.dialogue or '' }}</textarea>
+        <div class="dialogue-form-actions">
+          <button class="admin-btn admin-btn--primary admin-btn--sm" type="submit">Save</button>
+          <span class="dialogue-save-status" id="status-{{ stop.id }}"></span>
+        </div>
+      </form>
+
+      <!-- Hidden data for AI -->
+      <script type="application/json" id="stop-data-{{ stop.id }}">
+        {
+          "stop_id": {{ stop.id }},
+          "stop_number": {{ stop.order }},
+          "location_name": {{ loc.name | tojson }},
+          "description": {{ (loc.description or '') | tojson }},
+          "chapters": {{ (loc.chapters | sort(attribute='sort_order') | map(attribute='title') | list) | tojson }}
+        }
+      </script>
+
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+    <p class="admin-empty">No stops on this route yet. <a href="{{ url_for('admin.new_stop', route_id=route.id) }}">Add one</a>.</p>
+  {% endif %}
+
+</div>
+
+<!-- AI Draft modal -->
+<div id="ai-modal" class="ai-modal-backdrop" style="display:none" onclick="if(event.target===this)closeAiModal()">
+  <div class="ai-modal">
+    <div class="ai-modal-header">
+      <span class="ai-modal-title">✦ Draft dialogue with AI</span>
+      <button class="ai-modal-close" onclick="closeAiModal()">✕</button>
+    </div>
+    <div class="ai-modal-body">
+      <p id="ai-modal-stop-label" class="admin-hint" style="margin-bottom:8px;"></p>
+      <div class="admin-field">
+        <label class="admin-label">Guidance <span class="admin-optional">(optional)</span></label>
+        <textarea id="ai-context" class="admin-input" rows="3"
+          placeholder="e.g. Focus on the 1916 connection, keep it under 2 minutes speaking time…"></textarea>
+      </div>
+      <button id="ai-generate-btn" class="admin-btn admin-btn--primary" onclick="runAiDraft()">Generate</button>
+      <div id="ai-result-wrap" style="display:none">
+        <div class="ai-result-box" id="ai-result-text"></div>
+        <div class="ai-result-actions">
+          <button class="admin-btn admin-btn--primary admin-btn--sm" onclick="applyAiDraft()">Use this</button>
+          <button class="admin-btn admin-btn--ghost admin-btn--sm" onclick="runAiDraft()">Regenerate</button>
+        </div>
+      </div>
+      <div id="ai-error" class="ai-error" style="display:none"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const ROUTE_NAME = {{ route.name | tojson }};
+let _activeStopId = null;
+let _draftText    = null;
+
+function getStopData(stopId) {
+  const el = document.getElementById('stop-data-' + stopId);
+  return el ? JSON.parse(el.textContent) : null;
+}
+
+function draftStop(stopId, stopIndex) {
+  _activeStopId = stopId;
+  _draftText    = null;
+  document.getElementById('ai-context').value = '';
+  document.getElementById('ai-result-wrap').style.display = 'none';
+  document.getElementById('ai-error').style.display = 'none';
+  document.getElementById('ai-result-text').textContent = '';
+  const d = getStopData(stopId);
+  document.getElementById('ai-modal-stop-label').textContent =
+    'Stop ' + d.stop_number + ' — ' + d.location_name;
+  document.getElementById('ai-modal').style.display = 'flex';
+}
+
+function closeAiModal() {
+  document.getElementById('ai-modal').style.display = 'none';
+}
+
+async function runAiDraft() {
+  const btn   = document.getElementById('ai-generate-btn');
+  const errEl = document.getElementById('ai-error');
+  const wrap  = document.getElementById('ai-result-wrap');
+  const textEl = document.getElementById('ai-result-text');
+  errEl.style.display = 'none';
+  wrap.style.display  = 'none';
+  btn.textContent = 'Generating…';
+  btn.disabled    = true;
+
+  const d        = getStopData(_activeStopId);
+  const existing = document.getElementById('dialogue-' + _activeStopId)?.value || '';
+
+  try {
+    const res = await fetch('{{ url_for("admin.ai_draft") }}', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        field_type:    'stop_dialogue',
+        route_name:    ROUTE_NAME,
+        location_name: d.location_name,
+        stop_number:   d.stop_number,
+        extra_context: d.description + '\n' + document.getElementById('ai-context').value.trim(),
+        chapters:      d.chapters,
+        existing_text: existing,
+      }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    _draftText = data.text;
+    textEl.textContent = data.text;
+    wrap.style.display = 'block';
+  } catch(e) {
+    errEl.textContent  = e.message || 'Something went wrong.';
+    errEl.style.display = 'block';
+  } finally {
+    btn.textContent = 'Generate';
+    btn.disabled    = false;
+  }
+}
+
+function applyAiDraft() {
+  if (!_draftText || !_activeStopId) return;
+  document.getElementById('dialogue-' + _activeStopId).value = _draftText;
+  closeAiModal();
+}
+
+// Draft all stops sequentially
+async function draftAll() {
+  const btn = document.getElementById('draft-all-btn');
+  const stopCards = document.querySelectorAll('.dialogue-stop-card');
+  btn.textContent = 'Drafting…';
+  btn.disabled    = true;
+
+  for (const card of stopCards) {
+    const stopId = card.id.replace('stop-card-', '');
+    const d      = getStopData(stopId);
+    const existing = document.getElementById('dialogue-' + stopId)?.value || '';
+
+    const statusEl = document.getElementById('status-' + stopId);
+    if (statusEl) statusEl.textContent = '⏳ Drafting…';
+
+    try {
+      const res = await fetch('{{ url_for("admin.ai_draft") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          field_type:    'stop_dialogue',
+          route_name:    ROUTE_NAME,
+          location_name: d.location_name,
+          stop_number:   d.stop_number,
+          extra_context: d.description,
+          chapters:      d.chapters,
+          existing_text: existing,
+        }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      document.getElementById('dialogue-' + stopId).value = data.text;
+      if (statusEl) statusEl.textContent = '✓ Drafted';
+    } catch(e) {
+      if (statusEl) statusEl.textContent = '✗ Failed';
+    }
+  }
+
+  btn.textContent = '✦ Draft all with AI';
+  btn.disabled    = false;
+}
+</script>
+{% endblock %}

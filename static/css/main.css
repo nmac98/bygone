@@ -2199,3 +2199,137 @@ small.text-muted {
     border-radius: 6px;
     padding: 10px 14px;
 }
+
+
+/* ===========================
+   ROUTE DIALOGUE DRAFTER
+   =========================== */
+
+.dialogue-stop-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.dialogue-stop-card {
+    background: #111;
+    border: 1px solid #1e1e1e;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.dialogue-stop-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid #1a1a1a;
+    background: #141414;
+}
+
+.dialogue-stop-number {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    background: #2E7D52;
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.dialogue-stop-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.dialogue-stop-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #ddd;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dialogue-stop-category {
+    font-size: 0.7rem;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+/* Context panel */
+.dialogue-context {
+    border-bottom: 1px solid #1a1a1a;
+}
+
+.dialogue-context-summary {
+    padding: 8px 16px;
+    font-size: 0.75rem;
+    color: #555;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+}
+
+.dialogue-context-summary::-webkit-details-marker { display: none; }
+.dialogue-context-summary::before {
+    content: "› ";
+    color: #444;
+}
+.dialogue-context[open] .dialogue-context-summary::before {
+    content: "↓ ";
+    color: #666;
+}
+
+.dialogue-context-body {
+    padding: 10px 16px 14px;
+    background: #0d0d0d;
+}
+
+.dialogue-context-desc {
+    font-size: 0.82rem;
+    color: #777;
+    line-height: 1.6;
+    margin-bottom: 8px;
+}
+
+.dialogue-context-chapters {
+    margin: 0;
+    padding-left: 16px;
+    font-size: 0.78rem;
+    color: #666;
+    line-height: 1.7;
+}
+
+/* Dialogue form */
+.dialogue-form {
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.dialogue-textarea {
+    min-height: 130px;
+    resize: vertical;
+    line-height: 1.7;
+}
+
+.dialogue-form-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.dialogue-save-status {
+    font-size: 0.78rem;
+    color: #2E7D52;
+}
