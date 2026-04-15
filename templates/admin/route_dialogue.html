@@ -8,9 +8,13 @@
   <div class="editor-header">
     <a href="{{ url_for('admin.manage_stops', route_id=route.id) }}" class="editor-back">← Stops</a>
     <span class="editor-header-title">{{ route.name }} — Dialogue</span>
-    <button class="admin-btn admin-btn--primary admin-btn--sm" id="draft-all-btn" onclick="draftAll()">
-      ✦ Draft all with AI
-    </button>
+    <div style="display:flex;gap:8px;">
+      <button class="admin-btn admin-btn--ghost admin-btn--sm" id="save-all-btn"
+              onclick="saveAll()" style="display:none">Save all</button>
+      <button class="admin-btn admin-btn--primary admin-btn--sm" id="draft-all-btn" onclick="draftAll()">
+        ✦ Draft all with AI
+      </button>
+    </div>
   </div>
 
   {% with messages = get_flashed_messages(with_categories=true) %}
@@ -61,22 +65,19 @@
       </details>
       {% endif %}
 
-      <!-- Dialogue form -->
-      <form method="POST" action="{{ url_for('admin.edit_stop', stop_id=stop.id) }}"
-            class="dialogue-form">
-        <input type="hidden" name="location_id" value="{{ loc.id }}">
-        <input type="hidden" name="order" value="{{ stop.order }}">
+      <!-- Dialogue -->
+      <div class="dialogue-form">
         <textarea
           class="admin-input dialogue-textarea"
-          name="dialogue"
           id="dialogue-{{ stop.id }}"
           rows="6"
           placeholder="Write the tour guide dialogue for this stop…">{{ stop.dialogue or '' }}</textarea>
         <div class="dialogue-form-actions">
-          <button class="admin-btn admin-btn--primary admin-btn--sm" type="submit">Save</button>
+          <button class="admin-btn admin-btn--primary admin-btn--sm"
+                  onclick="saveStop({{ stop.id }}, this)">Save</button>
           <span class="dialogue-save-status" id="status-{{ stop.id }}"></span>
         </div>
-      </form>
+      </div>
 
       <!-- Hidden data for AI -->
       <script type="application/json" id="stop-data-{{ stop.id }}">
@@ -200,18 +201,53 @@ function applyAiDraft() {
   closeAiModal();
 }
 
-// Draft all stops sequentially
-async function draftAll() {
-  const btn = document.getElementById('draft-all-btn');
-  const stopCards = document.querySelectorAll('.dialogue-stop-card');
-  btn.textContent = 'Drafting…';
-  btn.disabled    = true;
+async function saveStop(stopId, btn) {
+  const dialogue = document.getElementById('dialogue-' + stopId)?.value || '';
+  const statusEl = document.getElementById('status-' + stopId);
+  const origText = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = 'Saving…'; btn.disabled = true; }
+  if (statusEl) statusEl.textContent = '';
+  try {
+    const res = await fetch(`/admin/stop/${stopId}/dialogue/save`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dialogue }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error('Save failed');
+    if (statusEl) { statusEl.textContent = '✓ Saved'; setTimeout(() => { statusEl.textContent = ''; }, 2000); }
+  } catch(e) {
+    if (statusEl) statusEl.textContent = '✗ Error';
+  } finally {
+    if (btn) { btn.textContent = origText; btn.disabled = false; }
+  }
+}
 
+async function saveAll() {
+  const btn = document.getElementById('save-all-btn');
+  btn.textContent = 'Saving…';
+  btn.disabled = true;
+  const stopCards = document.querySelectorAll('.dialogue-stop-card');
   for (const card of stopCards) {
     const stopId = card.id.replace('stop-card-', '');
-    const d      = getStopData(stopId);
-    const existing = document.getElementById('dialogue-' + stopId)?.value || '';
+    await saveStop(stopId, null);
+  }
+  btn.textContent = '✓ All saved';
+  setTimeout(() => { btn.textContent = 'Save all'; btn.disabled = false; }, 2000);
+}
 
+async function draftAll() {
+  const btn        = document.getElementById('draft-all-btn');
+  const saveAllBtn = document.getElementById('save-all-btn');
+  const stopCards  = document.querySelectorAll('.dialogue-stop-card');
+  btn.textContent  = 'Drafting…';
+  btn.disabled     = true;
+  saveAllBtn.style.display = 'none';
+
+  for (const card of stopCards) {
+    const stopId   = card.id.replace('stop-card-', '');
+    const d        = getStopData(stopId);
+    const existing = document.getElementById('dialogue-' + stopId)?.value || '';
     const statusEl = document.getElementById('status-' + stopId);
     if (statusEl) statusEl.textContent = '⏳ Drafting…';
 
@@ -240,6 +276,7 @@ async function draftAll() {
 
   btn.textContent = '✦ Draft all with AI';
   btn.disabled    = false;
+  saveAllBtn.style.display = 'inline-flex';
 }
 </script>
 {% endblock %}

@@ -256,6 +256,16 @@ def delete_route(route_id):
 
     return render_template('admin/route_delete.html', route=route)
 
+@admin_bp.route('/stop/<int:stop_id>/dialogue/save', methods=['POST'])
+@admin_required
+def stop_dialogue_save(stop_id):
+    stop = RouteStop.query.get_or_404(stop_id)
+    data = request.get_json()
+    stop.dialogue = (data or {}).get('dialogue', stop.dialogue)
+    db.session.commit()
+    return {'ok': True}
+
+
 @admin_bp.route('/route/<route_id>/dialogue')
 @admin_required
 def route_dialogue(route_id):
