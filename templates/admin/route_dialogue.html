@@ -86,7 +86,8 @@
           "stop_number": {{ stop.order }},
           "location_name": {{ loc.name | tojson }},
           "description": {{ (loc.description or '') | tojson }},
-          "chapters": {{ (loc.chapters | sort(attribute='sort_order') | map(attribute='title') | list) | tojson }}
+          "chapters": {{ (loc.chapters | sort(attribute='sort_order') | map(attribute='title') | list) | tojson }},
+          "next_location_name": {{ (stops[loop.index].location.name if loop.index < stops | length else '') | tojson }}
         }
       </script>
 
@@ -172,13 +173,14 @@ async function runAiDraft() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        field_type:    'stop_dialogue',
-        route_name:    ROUTE_NAME,
-        location_name: d.location_name,
-        stop_number:   d.stop_number,
-        extra_context: d.description + '\n' + document.getElementById('ai-context').value.trim(),
-        chapters:      d.chapters,
-        existing_text: existing,
+        field_type:         'stop_dialogue',
+        route_name:         ROUTE_NAME,
+        location_name:      d.location_name,
+        stop_number:        d.stop_number,
+        extra_context:      d.description + '\n' + document.getElementById('ai-context').value.trim(),
+        chapters:           d.chapters,
+        next_location_name: d.next_location_name || '',
+        existing_text:      existing,
       }),
     });
     const data = await res.json();
@@ -256,13 +258,14 @@ async function draftAll() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          field_type:    'stop_dialogue',
-          route_name:    ROUTE_NAME,
-          location_name: d.location_name,
-          stop_number:   d.stop_number,
-          extra_context: d.description,
-          chapters:      d.chapters,
-          existing_text: existing,
+          field_type:         'stop_dialogue',
+          route_name:         ROUTE_NAME,
+          location_name:      d.location_name,
+          stop_number:        d.stop_number,
+          extra_context:      d.description,
+          chapters:           d.chapters,
+          next_location_name: d.next_location_name || '',
+          existing_text:      existing,
         }),
       });
       const data = await res.json();

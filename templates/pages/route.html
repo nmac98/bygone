@@ -6,98 +6,99 @@
 
 <div class="route-page">
 
-    <!-- (1) ROUTE NAME -->
-    <h1 class="route-title">{{ route.name }}</h1>
-
-    <!-- (2) DESCRIPTION -->
-    <p class="route-description">
-        {{ route.description }}
-    </p>
-
-    <!--START BUTTON-->
-
-    <a 
-        class="start-tour-btn" 
-        href="{{ url_for('locations.gallery', loc_id=stops[0].location.id) }}?route={{ route.id }}"
-    >
+  <!-- (1) HERO: title, start button, summary, cover image -->
+  <section class="route-hero">
+    {% if route.cover_image %}
+    <div class="route-hero-img-wrap">
+      <img class="route-hero-img"
+           src="{{ url_for('static', filename='images/' + route.cover_image) }}"
+           alt="{{ route.name }}">
+      <div class="route-hero-overlay"></div>
+    </div>
+    {% endif %}
+    <div class="route-hero-content">
+      <h1 class="route-title">{{ route.name }}</h1>
+      {% if route.description %}
+      <p class="route-description">{{ route.description }}</p>
+      {% endif %}
+      {% if stops %}
+      <a class="start-tour-btn"
+         href="{{ url_for('locations.gallery', loc_id=stops[0].location.id) }}?route={{ route.id }}">
         Start Tour →
+      </a>
+      {% endif %}
+    </div>
+  </section>
+
+  <!-- (2) MAP + start tour -->
+  <section class="route-map-section">
+    <div id="route-map"></div>
+    {% if stops %}
+    <a class="start-tour-btn route-map-start"
+       href="{{ url_for('locations.gallery', loc_id=stops[0].location.id) }}?route={{ route.id }}">
+      Start Tour →
     </a>
+    {% endif %}
+  </section>
 
-
-    <!-- (3) MINI-MAP -->
-    <section class="route-map-section">
-        <div id="route-map"></div>
-    </section>
-
-    <!-- (4) STOPS ACCORDION -->
-    <section class="route-stops">
-        <h2>Stops</h2>
-
-        <div class="accordion">
-
-            {% for stop in stops %}
-                <div class="accordion-item">
-                  <div class="accordion-header">
-                      <button class="accordion-title">
-                          Stop {{ loop.index }} — {{ stop.location.name }}
-                      </button>
-
-                      <a 
-                          class="accordion-go-btn"
-                          href="{{ url_for('locations.gallery', loc_id=stop.location.id) }}?route={{ route.id }}"
-                          title="Go to stop"
-                      >
-                          →
-                      </a>
-                  </div>
-                    <div class="accordion-body">
-                        <p>{{ stop.dialogue }}</p>
-                    </div>
-                </div>
-            {% endfor %}
-
+  <!-- (3) SWIPEABLE STOP CARDS -->
+  <section class="route-stops-section">
+    <h2 class="route-stops-heading">{{ stops | length }} Stop{{ 's' if stops | length != 1 }}</h2>
+    <div class="route-stop-cards">
+      {% for stop in stops %}
+      {% set img = stops_data[loop.index0].img_url %}
+      <a class="route-stop-card"
+         href="{{ url_for('locations.gallery', loc_id=stop.location.id) }}?route={{ route.id }}">
+        <div class="route-stop-card-img-wrap">
+          {% if img %}
+          <img class="route-stop-card-img" src="{{ img }}" alt="{{ stop.location.name }}">
+          {% else %}
+          <div class="route-stop-card-img-placeholder"></div>
+          {% endif %}
+          <div class="route-stop-card-num">{{ loop.index }}</div>
         </div>
-    </section>
+        <span class="route-stop-card-name">{{ stop.location.name }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- (4) SECOND START TOUR -->
+  {% if stops %}
+  <section class="route-bottom-start">
+    <a class="start-tour-btn"
+       href="{{ url_for('locations.gallery', loc_id=stops[0].location.id) }}?route={{ route.id }}">
+      Start Tour →
+    </a>
+  </section>
+  {% endif %}
 
 </div>
 
-<!-- LEAFLET JS -->
 <script>
-    const stops = [
-        {% for stop in stops %}
-            {
-                name: "{{ stop.location.name }}",
-                lat: {{ stop.location.lat }},
-                lon: {{ stop.location.lon }},
-                num: {{ loop.index }}
-            }{% if not loop.last %},{% endif %}
-        {% endfor %}
-    ];
+  const stopsData = {{ stops_data | tojson }};
 
-    const map = L.map("route-map");
+  const map = L.map("route-map");
 
-    // Base Layer
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom: 19
-    }).addTo(map);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19
+  }).addTo(map);
 
-    // Numbered markers
-    const markerList = stops.map(stop => {
-        return L.marker([stop.lat, stop.lon], {
-            icon: L.divIcon({
-                className: "numbered-icon",
-                html: `<div class="marker-circle">${stop.num}</div>`,
-                iconSize: [30, 30],
-                iconAnchor: [15, 15]
-            })
-        }).bindPopup(`<b>${stop.name}</b>`);
-    });
+  const markerList = stopsData.map(stop => {
+    return L.marker([stop.lat, stop.lon], {
+      icon: L.divIcon({
+        className: "numbered-icon",
+        html: `<div class="marker-circle">${stop.index}</div>`,
+        iconSize: [30, 30],
+        iconAnchor: [15, 15]
+      })
+    }).bindPopup(`<b>${stop.name}</b>`);
+  });
 
-    markerList.forEach(m => m.addTo(map));
+  markerList.forEach(m => m.addTo(map));
 
-    // Fit map to all markers
-    const group = L.featureGroup(markerList);
-    map.fitBounds(group.getBounds().pad(0.3));
+  const group = L.featureGroup(markerList);
+  map.fitBounds(group.getBounds().pad(0.2));
 </script>
 
 {% endblock %}

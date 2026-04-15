@@ -220,13 +220,32 @@
                   <a href="{{ b.link_url }}" target="_blank">{{ b.link_label or b.link_url }}</a>
                 {% elif b.block_type == 'divider' %}
                   <hr class="block-divider-preview">
+                {% elif b.block_type == 'people' %}
+                  {% set people_preview = b.body | from_json if b.body else [] %}
+                  <div class="block-people-preview">
+                    {% for p in people_preview[:3] %}
+                      <span class="block-people-chip">
+                        {% if p.img_url %}<img src="{{ p.img_url }}" alt="">{% endif %}
+                        {{ p.name }}
+                      </span>
+                    {% endfor %}
+                    {% if people_preview | length > 3 %}
+                      <span class="block-people-chip block-people-chip--more">+{{ people_preview | length - 3 }} more</span>
+                    {% endif %}
+                  </div>
                 {% endif %}
               </div>
-              <form method="POST"
-                    action="{{ url_for('admin.block_delete', block_id=b.id) }}"
-                    onsubmit="return confirm('Delete this block?')">
-                <button class="admin-btn admin-btn--danger admin-btn--xs" type="submit">✕</button>
-              </form>
+              <div style="display:flex;gap:4px;align-items:center;">
+                {% if b.block_type == 'people' %}
+                <a href="{{ url_for('admin.block_people_edit', block_id=b.id) }}"
+                   class="admin-btn admin-btn--ghost admin-btn--xs">Edit</a>
+                {% endif %}
+                <form method="POST"
+                      action="{{ url_for('admin.block_delete', block_id=b.id) }}"
+                      onsubmit="return confirm('Delete this block?')">
+                  <button class="admin-btn admin-btn--danger admin-btn--xs" type="submit">✕</button>
+                </form>
+              </div>
             </div>
             {% endfor %}
           </div>
@@ -237,7 +256,7 @@
           <!-- Add block buttons -->
           <div class="add-block-row">
             <span class="add-block-label">Add block:</span>
-            {% for btype in ['text', 'image', 'link', 'divider'] %}
+            {% for btype in ['text', 'image', 'link', 'divider', 'people'] %}
             <a href="{{ url_for('admin.block_new', chapter_id=ch.id) }}?block_type={{ btype }}"
                class="admin-btn admin-btn--ghost admin-btn--xs">+ {{ btype }}</a>
             {% endfor %}

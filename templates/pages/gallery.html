@@ -75,7 +75,15 @@
     <!-- (3) OVERVIEW SECTION / if on a tour, gives route_stop dialogue -->
     <section class="location-overview">
         {% if route_id %}
-            <h2>Tour Guide</h2>
+            <div class="tour-guide-header">
+              <h2>Tour Guide</h2>
+              {% if dialogue %}
+              <button class="tts-btn" id="tts-btn" onclick="toggleTTS()" aria-label="Play dialogue">
+                <span id="tts-icon">▶</span>
+                <span id="tts-label">Listen</span>
+              </button>
+              {% endif %}
+            </div>
 
             {# Dialogue may be a list or a single string #}
             {% if dialogue %}
@@ -129,7 +137,39 @@
                     {% if ch.blocks and ch.blocks|length %}
                     {% for b in (ch.blocks | sort(attribute="sort_order")) %}
 
-                        {% if b.block_type == "text" %}
+                        {% if b.block_type == "people" %}
+                        {% set people = b.body | from_json %}
+                        {% if people %}
+                        <div class="people-cards-section">
+                          <div class="people-cards-scroll">
+                            {% for p in people %}
+                            <div class="people-card">
+                              <div class="people-card-img-wrap">
+                                {% if p.img_url %}
+                                <img class="people-card-img" src="{{ p.img_url }}" alt="{{ p.name }}">
+                                {% else %}
+                                <div class="people-card-img-placeholder">{{ p.name[0] if p.name else '?' }}</div>
+                                {% endif %}
+                              </div>
+                              <div class="people-card-body">
+                                <div class="people-card-name">{{ p.name }}</div>
+                                {% if p.dates or p.role %}
+                                <div class="people-card-meta">
+                                  {% if p.dates %}<span class="people-card-dates">{{ p.dates }}</span>{% endif %}
+                                  {% if p.role %}<span class="people-card-role">{{ p.role }}</span>{% endif %}
+                                </div>
+                                {% endif %}
+                                {% if p.summary %}
+                                <p class="people-card-summary">{{ p.summary }}</p>
+                                {% endif %}
+                              </div>
+                            </div>
+                            {% endfor %}
+                          </div>
+                        </div>
+                        {% endif %}
+
+                        {% elif b.block_type == "text" %}
                         <div class="chapter-block chapter-text">
                             {{ (b.body or "") | e | replace("\n", "<br>") | safe }}
                         </div>
@@ -211,6 +251,55 @@
 
 
 </div>
+
+{% if route_id and dialogue %}
+<script>
+(function() {
+  const text = {{ (dialogue if dialogue is string else (dialogue | join(' '))) | tojson }};
+  let utterance = null;
+  let speaking = false;
+  let paused = false;
+
+  function setBtn(icon, label) {
+    document.getElementById('tts-icon').textContent = icon;
+    document.getElementById('tts-label').textContent = label;
+  }
+
+  window.toggleTTS = function() {
+    if (!('speechSynthesis' in window)) {
+      alert('Text-to-speech is not supported in your browser.');
+      return;
+    }
+
+    if (speaking && !paused) {
+      // Currently playing → pause
+      speechSynthesis.pause();
+      paused = true;
+      setBtn('▶', 'Resume');
+    } else if (speaking && paused) {
+      // Currently paused → resume
+      speechSynthesis.resume();
+      paused = false;
+      setBtn('⏸', 'Pause');
+    } else {
+      // Not playing → start
+      speechSynthesis.cancel();
+      utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'en-IE';
+      utterance.rate = 0.95;
+      utterance.onstart = () => { speaking = true; paused = false; setBtn('⏸', 'Pause'); };
+      utterance.onend = () => { speaking = false; paused = false; setBtn('▶', 'Listen'); };
+      utterance.onerror = () => { speaking = false; paused = false; setBtn('▶', 'Listen'); };
+      speechSynthesis.speak(utterance);
+    }
+  };
+
+  // Stop TTS when navigating away
+  window.addEventListener('pagehide', () => speechSynthesis.cancel());
+  window.addEventListener('beforeunload', () => speechSynthesis.cancel());
+})();
+</script>
+{% endif %}
 
 {% if route_id %}
 

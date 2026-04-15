@@ -877,6 +877,37 @@ html, body {
     color: #ddd;
 }
 
+.tour-guide-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.tour-guide-header h2 {
+    margin: 0;
+}
+
+.tts-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: #2E7D52;
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    white-space: nowrap;
+}
+
+.tts-btn:hover {
+    background: #3da366;
+}
+
 /* ===========================
    HISTORY SECTION
    =========================== */
@@ -1087,7 +1118,7 @@ html, body {
 }
 
 .accordion-go-btn {
-    background: #007bff;
+    background: #2E7D52;
     color: #fff;
     text-decoration: none;
     padding: 6px 10px;
@@ -1098,7 +1129,7 @@ html, body {
 }
 
 .accordion-go-btn:hover {
-    background: #005ec4;
+    background: #3da366;
 }
 
 /* Route Navigation on gallery.html / locations pages */
@@ -1172,39 +1203,112 @@ html, body {
    =========================== */
 
 .route-page {
-    padding: 16px;
     max-width: 900px;
     margin: 0 auto;
+    padding-bottom: 48px;
+}
+
+/* --- (1) HERO --- */
+.route-hero {
+    position: relative;
+    min-height: 320px;
+    display: flex;
+    align-items: flex-end;
+    overflow: hidden;
+    border-radius: 0 0 16px 16px;
+    margin-bottom: 24px;
+}
+
+.route-hero-img-wrap {
+    position: absolute;
+    inset: 0;
+}
+
+.route-hero-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.route-hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.75) 100%);
+}
+
+.route-hero-content {
+    position: relative;
+    padding: 24px 20px;
+    width: 100%;
 }
 
 .route-title {
-    font-size: 1.8rem;
+    font-size: 2rem;
+    font-weight: 700;
     color: #fff;
-    margin-bottom: 8px;
+    margin: 0 0 8px;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
 }
 
 .route-description {
-    color: #ccc;
-    line-height: 1.6;
-    margin-bottom: 20px;
+    color: rgba(255,255,255,0.85);
+    line-height: 1.5;
+    margin: 0 0 16px;
+    font-size: 0.95rem;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.4);
 }
 
-/* Mini-map container */
+/* No cover image — plain dark header */
+.route-hero:not(:has(.route-hero-img-wrap)) {
+    background: #111;
+    min-height: 180px;
+    border-radius: 0;
+    padding: 24px 20px;
+    align-items: flex-start;
+}
+
+/* --- Start Tour button --- */
+.start-tour-btn {
+    display: inline-block;
+    padding: 14px 24px;
+    background: #2E7D52;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 8px;
+    font-size: 1.05rem;
+    font-weight: 600;
+    transition: background 0.2s ease;
+}
+
+.start-tour-btn:hover {
+    background: #3da366;
+}
+
+/* --- (2) MAP SECTION --- */
 .route-map-section {
-    width: 100%;
-    margin-bottom: 20px;
+    padding: 0 16px;
+    margin-bottom: 32px;
 }
 
 #route-map {
     width: 100%;
-    height: 250px;
+    height: 300px;
     border-radius: 12px;
     overflow: hidden;
+    margin-bottom: 14px;
+}
+
+.route-map-start {
+    display: block;
+    text-align: center;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 /* Numbered marker style */
 .marker-circle {
-    background: #007bff;
+    background: #2E7D52;
     color: #fff;
     border-radius: 50%;
     width: 30px;
@@ -1217,31 +1321,326 @@ html, body {
     box-shadow: 0 0 6px rgba(0,0,0,0.3);
 }
 
-/* Stops section */
-.route-stops h2 {
-    color: #fff;
-    margin-bottom: 10px;
+/* --- (3) SWIPEABLE STOP CARDS --- */
+.route-stops-section {
+    padding: 0 16px;
+    margin-bottom: 32px;
 }
 
-/* start tour button */
-
-.start-tour-btn {
-    display: inline-block;
-    margin: 12px 0 20px 0;
-    padding: 14px 20px;
-    background: #007bff;
-    color: #fff;
-    text-decoration: none;
-    border-radius: 8px;
+.route-stops-heading {
     font-size: 1.1rem;
     font-weight: 600;
-    transition: background 0.2s ease;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 0 0 12px;
 }
 
-.start-tour-btn:hover {
-    background: #005ec4;
+.route-stop-cards {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    /* hide scrollbar */
+    scrollbar-width: none;
+}
+.route-stop-cards::-webkit-scrollbar { display: none; }
+
+.route-stop-card {
+    flex: 0 0 150px;
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    text-decoration: none;
+    color: #fff;
 }
 
+.route-stop-card-img-wrap {
+    position: relative;
+    width: 150px;
+    height: 150px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #1a1a1a;
+}
+
+.route-stop-card-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.2s ease;
+}
+
+.route-stop-card:hover .route-stop-card-img {
+    transform: scale(1.04);
+}
+
+.route-stop-card-img-placeholder {
+    width: 100%;
+    height: 100%;
+    background: #222;
+}
+
+.route-stop-card-num {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: #2E7D52;
+    color: #fff;
+    border-radius: 50%;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+    border: 2px solid #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+}
+
+.route-stop-card-name {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #ddd;
+    line-height: 1.3;
+    text-align: center;
+    padding: 0 4px;
+}
+
+/* --- (4) BOTTOM START --- */
+.route-bottom-start {
+    padding: 0 16px;
+    text-align: center;
+}
+
+.route-bottom-start .start-tour-btn {
+    width: 100%;
+    box-sizing: border-box;
+    text-align: center;
+    display: block;
+}
+
+
+/* ===========================
+   PEOPLE CARDS — frontend
+   =========================== */
+
+.people-cards-section {
+    margin: 16px 0;
+}
+
+.people-cards-scroll {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 8px;
+    scrollbar-width: none;
+}
+.people-cards-scroll::-webkit-scrollbar { display: none; }
+
+.people-card {
+    flex: 0 0 220px;
+    scroll-snap-align: start;
+    background: #1a1a1a;
+    border-radius: 14px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.people-card-img-wrap {
+    width: 100%;
+    height: 180px;
+    overflow: hidden;
+    background: #222;
+    flex-shrink: 0;
+}
+
+.people-card-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top center;
+    display: block;
+}
+
+.people-card-img-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    font-weight: 700;
+    color: #444;
+    background: #1e1e1e;
+}
+
+.people-card-body {
+    padding: 12px 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+}
+
+.people-card-name {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.3;
+}
+
+.people-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+
+.people-card-dates {
+    font-size: 0.75rem;
+    color: #888;
+}
+
+.people-card-role {
+    font-size: 0.75rem;
+    color: #3da366;
+    font-weight: 500;
+}
+
+.people-card-summary {
+    font-size: 0.8rem;
+    color: #bbb;
+    line-height: 1.5;
+    margin: 0;
+}
+
+/* ===========================
+   PEOPLE EDITOR — admin
+   =========================== */
+
+.people-editor-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.people-editor-card {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 10px;
+    padding: 14px;
+}
+
+.people-editor-card-top {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+}
+
+.people-editor-img-wrap {
+    flex-shrink: 0;
+    width: 100px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.people-editor-img-preview {
+    width: 100px;
+    height: 100px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #222;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.people-editor-img-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top center;
+    display: block;
+}
+
+.people-editor-img-placeholder {
+    font-size: 0.7rem;
+    color: #555;
+    text-align: center;
+}
+
+.people-editor-img-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.people-editor-fields {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+
+.people-editor-remove {
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    align-self: flex-start;
+    flex-shrink: 0;
+    transition: color 0.15s;
+}
+
+.people-editor-remove:hover {
+    color: #e55;
+}
+
+/* Block list preview chips */
+.block-people-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+
+.block-people-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #222;
+    border-radius: 20px;
+    padding: 3px 8px 3px 4px;
+    font-size: 0.75rem;
+    color: #ddd;
+}
+
+.block-people-chip img {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    object-fit: cover;
+    object-position: top;
+}
+
+.block-people-chip--more {
+    background: #333;
+    color: #aaa;
+}
 
 /* ===========================
    ADMIN STYLES

@@ -13,11 +13,20 @@ from blueprints.routes_app import routes_bp
 from blueprints.admin import admin_bp
 
 import os
+import json as _json
 
 load_dotenv()
 
 app = Flask(__name__)
 app.config.from_object(Config)
+
+def _from_json(value):
+    try:
+        return _json.loads(value)
+    except Exception:
+        return []
+
+app.jinja_env.filters['from_json'] = _from_json
 
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10 MB max upload
 

@@ -16,7 +16,7 @@
       <div class="admin-field">
         <label class="admin-label">Block Type</label>
         <div class="block-type-tabs">
-          {% for t in ['text', 'image', 'link', 'divider'] %}
+          {% for t in ['text', 'image', 'link', 'divider', 'people'] %}
           <label class="block-type-tab">
             <input type="radio" name="block_type" value="{{ t }}"
               {% if t == preset_type %}checked{% elif not preset_type and t == 'text' %}checked{% endif %}
@@ -75,6 +75,19 @@
         <p class="admin-hint">A horizontal rule will be inserted — no additional fields needed.</p>
       </div>
 
+      <div id="fields-people" class="block-fields" style="display:none">
+        <div class="admin-label-row" style="margin-bottom:10px;">
+          <label class="admin-label">People cards</label>
+          <button type="button" class="ai-draft-btn" onclick="generatePeople()">✦ Generate with AI</button>
+        </div>
+        <p class="admin-hint" style="margin-bottom:12px;">Add people manually or generate with AI. Click "Fetch image" to auto-load a Wikipedia photo for each person.</p>
+        <div id="people-list" class="people-editor-list"></div>
+        <button type="button" class="admin-btn admin-btn--ghost admin-btn--sm"
+                style="margin-top:8px;" onclick="addPersonCard({})">+ Add person manually</button>
+        <input type="hidden" name="body" id="people-json">
+        <div id="people-ai-status" class="admin-hint" style="margin-top:8px;display:none;"></div>
+      </div>
+
       <div class="admin-field">
         <label class="admin-label">Sort order</label>
         <input class="admin-input admin-input--short" type="number" name="sort_order" value="0">
@@ -92,11 +105,137 @@
 
 <script>
 function showBlockFields(type) {
-  ['text','image','link','divider'].forEach(t => {
+  ['text','image','link','divider','people'].forEach(t => {
     document.getElementById('fields-' + t).style.display = t === type ? '' : 'none';
   });
 }
 showBlockFields('{{ preset_type or "text" }}');
+
+// ── People editor ────────────────────────────────────────
+let _peopleCounter = 0;
+
+function addPersonCard(data) {
+  const i = _peopleCounter++;
+  const card = document.createElement('div');
+  card.className = 'people-editor-card';
+  card.dataset.index = i;
+  card.innerHTML = `
+    <div class="people-editor-card-top">
+      <div class="people-editor-img-wrap">
+        <div class="people-editor-img-preview" id="img-preview-${i}">
+          ${data.img_url ? `<img src="${data.img_url}" alt="">` : '<span class="people-editor-img-placeholder">No image</span>'}
+        </div>
+        <div class="people-editor-img-actions">
+          <button type="button" class="admin-btn admin-btn--ghost admin-btn--xs"
+            onclick="fetchWikiImage(${i})">Fetch image</button>
+          <button type="button" class="admin-btn admin-btn--ghost admin-btn--xs"
+            onclick="document.getElementById('img-url-${i}').style.display='block'">Custom URL</button>
+        </div>
+        <input type="text" id="img-url-${i}" class="admin-input" placeholder="Image URL"
+          value="${data.img_url || ''}"
+          style="display:${data.img_url ? 'block' : 'none'}; margin-top:6px; font-size:0.75rem;"
+          oninput="updateImgPreview(${i})">
+      </div>
+      <div class="people-editor-fields">
+        <input class="admin-input people-field-name" type="text" placeholder="Full name *"
+          value="${data.name || ''}" required>
+        <div style="display:flex;gap:8px;">
+          <input class="admin-input people-field-dates" type="text" placeholder="Dates (e.g. 1906–1989)"
+            value="${data.dates || ''}" style="flex:1">
+          <input class="admin-input people-field-role" type="text" placeholder="Role / profession"
+            value="${data.role || ''}" style="flex:2">
+        </div>
+        <textarea class="admin-input people-field-summary" rows="2"
+          placeholder="2–3 sentence summary...">${data.summary || ''}</textarea>
+      </div>
+      <button type="button" class="people-editor-remove" onclick="this.closest('.people-editor-card').remove()"
+        title="Remove">✕</button>
+    </div>
+  `;
+  document.getElementById('people-list').appendChild(card);
+}
+
+function updateImgPreview(i) {
+  const url = document.getElementById('img-url-' + i).value.trim();
+  const preview = document.getElementById('img-preview-' + i);
+  if (url) {
+    preview.innerHTML = `<img src="${url}" alt="" onerror="this.style.display='none'">`;
+  } else {
+    preview.innerHTML = '<span class="people-editor-img-placeholder">No image</span>';
+  }
+}
+
+async function fetchWikiImage(i) {
+  const card = document.querySelector(`[data-index="${i}"]`);
+  const nameEl = card.querySelector('.people-field-name');
+  const name = nameEl.value.trim();
+  if (!name) { alert('Enter a name first.'); return; }
+  try {
+    const res = await fetch(
+      'https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(name),
+      { headers: { 'Accept': 'application/json' } }
+    );
+    const data = await res.json();
+    const thumb = data.thumbnail?.source;
+    if (thumb) {
+      document.getElementById('img-url-' + i).value = thumb;
+      document.getElementById('img-url-' + i).style.display = 'block';
+      updateImgPreview(i);
+    } else {
+      alert('No Wikipedia image found for "' + name + '".');
+    }
+  } catch { alert('Could not fetch from Wikipedia.'); }
+}
+
+function syncPeopleJson() {
+  const cards = document.querySelectorAll('.people-editor-card');
+  const people = Array.from(cards).map(card => ({
+    name:    card.querySelector('.people-field-name').value.trim(),
+    dates:   card.querySelector('.people-field-dates').value.trim(),
+    role:    card.querySelector('.people-field-role').value.trim(),
+    summary: card.querySelector('.people-field-summary').value.trim(),
+    img_url: card.querySelector('[id^="img-url-"]').value.trim(),
+  })).filter(p => p.name);
+  document.getElementById('people-json').value = JSON.stringify(people);
+  return people.length > 0;
+}
+
+// Hook into form submit
+document.querySelector('form').addEventListener('submit', function(e) {
+  const type = document.querySelector('input[name=block_type]:checked')?.value;
+  if (type === 'people') {
+    if (!syncPeopleJson()) {
+      e.preventDefault();
+      alert('Add at least one person before saving.');
+    }
+  }
+});
+
+async function generatePeople() {
+  const statusEl = document.getElementById('people-ai-status');
+  statusEl.style.display = 'block';
+  statusEl.textContent = '⏳ Generating people cards…';
+  try {
+    const res = await fetch('{{ url_for("admin.ai_draft") }}', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        field_type:    'people_cards',
+        location_name: LOCATION_NAME,
+        chapter_title: CHAPTER_TITLE,
+        extra_context: '',
+      }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    document.getElementById('people-list').innerHTML = '';
+    _peopleCounter = 0;
+    data.people.forEach(p => addPersonCard(p));
+    statusEl.textContent = `✓ Generated ${data.people.length} people — review and fetch images below.`;
+  } catch (e) {
+    statusEl.textContent = '✗ ' + (e.message || 'Something went wrong.');
+  }
+}
 </script>
 
 <!-- AI Draft modal -->

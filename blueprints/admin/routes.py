@@ -794,7 +794,11 @@ def block_new(chapter_id):
             flash("Image block requires an image selection.", "error")
             return redirect(request.url)
 
-        if block_type not in ("text", "image", "link", "divider"):
+        if block_type == "people" and not b.body:
+            flash("People block requires at least one person.", "error")
+            return redirect(request.url)
+
+        if block_type not in ("text", "image", "link", "divider", "people"):
             flash("Invalid block type.", "error")
             return redirect(request.url)
 
@@ -816,6 +820,41 @@ def block_delete(block_id):
     db.session.commit()
     flash("Block deleted.", "success")
     return redirect(url_for("admin.edit_location", location_id=location_id))
+
+
+@admin_bp.route("/blocks/<int:block_id>/people/edit", methods=["GET", "POST"])
+@admin_required
+def block_people_edit(block_id):
+    import json as _json
+    b = ChapterBlock.query.options(
+        joinedload(ChapterBlock.chapter).joinedload(LocationChapter.location)
+    ).get_or_404(block_id)
+
+    if request.method == "POST":
+        body = (request.form.get("body") or "").strip()
+        try:
+            people = _json.loads(body)
+            if not isinstance(people, list):
+                raise ValueError
+        except Exception:
+            flash("Invalid people data.", "error")
+            return redirect(request.url)
+        b.body = _json.dumps(people)
+        db.session.commit()
+        flash("People block saved.", "success")
+        return redirect(url_for("admin.edit_location", location_id=b.chapter.location_id))
+
+    try:
+        people = _json.loads(b.body or "[]")
+    except Exception:
+        people = []
+
+    return render_template(
+        "admin/block_people_edit.html",
+        block=b,
+        chapter=b.chapter,
+        people=people,
+    )
 
 
 # -----------------------
@@ -934,32 +973,69 @@ def ai_draft():
             f"Expand or improve on this draft: {existing_text}" if existing_text else "",
             "Reply with the paragraph only — no preamble, no quotes.",
         ])
-    elif field_type == "stop_dialogue":
-        route_name   = (data or {}).get("route_name", "")
-        stop_number  = (data or {}).get("stop_number", "")
-        chapters     = (data or {}).get("chapters", [])
-        chapter_ctx  = "; ".join(chapters) if chapters else ""
+    elif field_type == "people_cards":
         prompt = ctx([
-            f'You are writing the tour guide script for stop {stop_number} of a walking tour called "{route_name}" in Dublin, Ireland.',
+            f'List the 6–8 most notable people associated with "{location_name}" in Dublin'
+            + (f', specifically in the context of "{chapter_title}"' if chapter_title else '') + '.',
+            f'Additional focus: {extra_context}' if extra_context else '',
+            '',
+            'Return a JSON array only — no markdown, no explanation, no code fences.',
+            'Each item must follow this exact structure:',
+            '{"name": "Full Name", "dates": "YYYY–YYYY", "role": "One-line role or profession", "summary": "2–3 sentences on their connection to this place and their notable achievements."}',
+            'Use "YYYY–YYYY" date format (en dash). Use empty string if dates are unknown.',
+            'Be accurate. Only include people with a genuine, documented connection to this location.',
+        ])
+    elif field_type == "stop_dialogue":
+        route_name      = (data or {}).get("route_name", "")
+        stop_number     = (data or {}).get("stop_number", "")
+        chapters        = (data or {}).get("chapters", [])
+        next_location   = (data or {}).get("next_location_name", "")
+        chapter_ctx     = "; ".join(chapters) if chapters else ""
+        is_last_stop    = not next_location
+
+        prompt = ctx([
+            f'You are writing the spoken tour guide script for stop {stop_number} of a walking tour called "{route_name}" in Dublin, Ireland.',
             f'The stop is at "{location_name}".',
             f'Location overview: {extra_context}' if extra_context else "",
-            f'History chapters covered here: {chapter_ctx}' if chapter_ctx else "",
-            "Write 2–3 short paragraphs of engaging, spoken tour guide dialogue — warm, vivid, and informative.",
-            "Write as if a knowledgeable local guide is speaking directly to a small group of visitors standing at the location.",
-            "Do not use headings or bullet points. Write flowing prose only.",
+            f'History chapters at this location: {chapter_ctx}' if chapter_ctx else "",
+            "",
+            "TONE AND STYLE:",
+            "- Factual and detail-driven. Specific details — names, dates, materials, dimensions, events — are the backbone of good storytelling. Prefer the concrete over the abstract.",
+            "- Storytelling in voice, not in gimmick. No rhetorical flourishes, no clichés ('a city frozen in time', 'let that sink in', 'stands as a testament to', 'hidden gem', 'nestled', 'fascinatingly').",
+            "- Written to be spoken aloud to a small group standing at the location. Natural sentence rhythm, not written prose.",
+            "- 2–3 paragraphs. No headings, no bullet points.",
+            "",
+            "CLOSING:",
+            f'The final sentence should briefly and naturally signal the move to the next stop: "{next_location}". '
+            "Do this with variety — sometimes a thematic contrast, sometimes a time-period shift, sometimes a simple geographical cue. "
+            "Do not always frame it the same way. Do not name the next stop explicitly, but give the listener a sense of what kind of place or era they are moving toward."
+            if not is_last_stop else
+            "This is the final stop. Close with a short reflection that brings the tour to a natural end — something that looks back across what was seen, without being sentimental.",
+            "",
             f"Improve on this existing draft: {existing_text}" if existing_text else "",
-            "Reply with the dialogue only — no preamble, no quotes.",
+            "Reply with the dialogue only — no preamble, no quotation marks.",
         ])
     else:
         return {"error": "Unknown field type."}, 400
 
     client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    max_tokens = 1200 if field_type == "people_cards" else 800
     message = client.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=500,
+        max_tokens=max_tokens,
         messages=[{"role": "user", "content": prompt}],
     )
-    return {"text": message.content[0].text.strip()}
+    raw = message.content[0].text.strip()
+
+    if field_type == "people_cards":
+        import json as _json
+        try:
+            people = _json.loads(raw)
+            return {"people": people}
+        except Exception:
+            return {"error": "AI returned invalid JSON. Try again."}, 500
+
+    return {"text": raw}
 
 
 @admin_bp.route("/chapter-topics/<int:ct_id>/delete", methods=["POST"])
