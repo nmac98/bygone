@@ -100,7 +100,11 @@
 
         {% else %}
             <h2>Overview</h2>
-            <p>{{ location.description }}</p>
+            <div class="overview-text" id="overview-text">
+                <p>{{ location.description }}</p>
+            </div>
+            <button class="overview-expand-btn" id="overview-expand-btn"
+                    onclick="toggleOverview()">Read more</button>
         {% endif %}
     </section>
 
@@ -251,6 +255,22 @@
 
 
 </div>
+
+{% if not route_id %}
+<script>
+(function() {
+  const el  = document.getElementById('overview-text');
+  const btn = document.getElementById('overview-expand-btn');
+  if (!el || !btn) return;
+  // Hide button if content fits without clamping
+  if (el.scrollHeight <= el.clientHeight + 2) { btn.style.display = 'none'; return; }
+  window.toggleOverview = function() {
+    const expanded = el.classList.toggle('expanded');
+    btn.textContent = expanded ? 'Read less' : 'Read more';
+  };
+})();
+</script>
+{% endif %}
 
 {% if route_id and dialogue %}
 <script>

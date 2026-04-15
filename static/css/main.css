@@ -879,6 +879,29 @@ html, body {
     color: #ddd;
 }
 
+.overview-text {
+    position: relative;
+    overflow: hidden;
+    max-height: 4.8em; /* ~3 lines at 1.6 line-height */
+    transition: max-height 0.3s ease;
+}
+
+.overview-text.expanded {
+    max-height: 9999px;
+}
+
+.overview-expand-btn {
+    display: inline-block;
+    margin-top: 6px;
+    background: none;
+    border: none;
+    color: #3da366;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 0;
+}
+
 .tour-guide-header {
     display: flex;
     align-items: center;
