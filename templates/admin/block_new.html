@@ -84,8 +84,13 @@
         <div id="people-list" class="people-editor-list"></div>
         <button type="button" class="admin-btn admin-btn--ghost admin-btn--sm"
                 style="margin-top:8px;" onclick="addPersonCard({})">+ Add person manually</button>
-        <input type="hidden" name="body" id="people-json">
+        <input type="hidden" name="people_body" id="people-json">
         <div id="people-ai-status" class="admin-hint" style="margin-top:8px;display:none;"></div>
+        <div style="margin-top:16px;">
+          <button type="submit" class="admin-btn admin-btn--primary" onclick="syncPeopleJson()">
+            Save people block
+          </button>
+        </div>
       </div>
 
       <div class="admin-field">
@@ -200,11 +205,13 @@ function syncPeopleJson() {
   return people.length > 0;
 }
 
-// Hook into form submit
+// Sync people JSON before any form submit
 document.querySelector('form').addEventListener('submit', function(e) {
   const type = document.querySelector('input[name=block_type]:checked')?.value;
   if (type === 'people') {
-    if (!syncPeopleJson()) {
+    syncPeopleJson();
+    const people = JSON.parse(document.getElementById('people-json').value || '[]');
+    if (!people.length) {
       e.preventDefault();
       alert('Add at least one person before saving.');
     }

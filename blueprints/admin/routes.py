@@ -766,11 +766,22 @@ def block_new(chapter_id):
         block_type = (request.form.get("block_type") or "").strip()
         sort_order = int(request.form.get("sort_order") or 0)
 
+        if block_type == "people":
+            import json as _json
+            raw = (request.form.get("people_body") or "").strip()
+            try:
+                people_data = _json.loads(raw)
+                body_val = _json.dumps(people_data) if isinstance(people_data, list) else None
+            except Exception:
+                body_val = None
+        else:
+            body_val = (request.form.get("body") or "").strip() or None
+
         b = ChapterBlock(
             chapter_id=chapter.id,
             block_type=block_type,
             sort_order=sort_order,
-            body=(request.form.get("body") or "").strip() or None,
+            body=body_val,
             caption_override=(request.form.get("caption_override") or "").strip() or None,
             link_label=(request.form.get("link_label") or "").strip() or None,
             link_url=(request.form.get("link_url") or "").strip() or None,
@@ -795,7 +806,7 @@ def block_new(chapter_id):
             return redirect(request.url)
 
         if block_type == "people" and not b.body:
-            flash("People block requires at least one person.", "error")
+            flash("People block requires at least one person. Generate or add people first.", "error")
             return redirect(request.url)
 
         if block_type not in ("text", "image", "link", "divider", "people"):
