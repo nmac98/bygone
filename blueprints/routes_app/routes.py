@@ -32,9 +32,11 @@ def view_route(route_name):
             "img_url": img_url,
         })
 
+    template = "pages/running_route.html" if route.route_type == "running" else "pages/route.html"
     return render_template(
-        "pages/route.html",
+        template,
         route=route,
         stops=stops,
         stops_data=stops_data,
+        waypoints=route.waypoints or [],
     )

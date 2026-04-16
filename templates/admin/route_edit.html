@@ -23,6 +23,22 @@
     </div>
 
     <div class="form-group">
+      <label>Route type</label>
+      <div class="block-type-tabs" style="margin-top:6px;">
+        <label class="block-type-tab">
+          <input type="radio" name="route_type" value="walking"
+            {% if route.route_type != 'running' %}checked{% endif %}>
+          <span>🚶 Walking</span>
+        </label>
+        <label class="block-type-tab">
+          <input type="radio" name="route_type" value="running"
+            {% if route.route_type == 'running' %}checked{% endif %}>
+          <span>🏃 Running</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="form-group">
       <label>Cover Image</label>
       <input type="hidden" name="cover_image" id="cover_image" value="{{ route.cover_image or '' }}">
       <div class="image-picker">
@@ -39,6 +55,12 @@
 
     <button type="submit" class="btn btn-primary">Save Changes</button>
     <a href="{{ url_for('admin.admin_routes') }}" class="btn btn-secondary">Cancel</a>
+    {% if route.route_type == 'running' %}
+    <a href="{{ url_for('admin.route_waypoints', route_id=route.id) }}"
+       class="btn btn-secondary" style="margin-left:8px;">
+      🗺 Edit route path
+    </a>
+    {% endif %}
   </form>
 </div>
 

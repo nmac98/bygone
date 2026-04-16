@@ -214,7 +214,10 @@ def new_route():
             return redirect(request.url)
 
         cover_image = request.form.get('cover_image', '').strip() or None
-        new_r = Route(id=route_id, name=name, description=description, cover_image=cover_image)
+        route_type = request.form.get('route_type', 'walking').strip()
+        if route_type not in ('walking', 'running'):
+            route_type = 'walking'
+        new_r = Route(id=route_id, name=name, description=description, cover_image=cover_image, route_type=route_type)
         db.session.add(new_r)
         db.session.commit()
 
@@ -232,12 +235,47 @@ def edit_route(route_id):
         route.name = request.form['name'].strip()
         route.description = request.form.get('description', '')
         route.cover_image = request.form.get('cover_image', '').strip() or None
+        route_type = request.form.get('route_type', 'walking').strip()
+        route.route_type = route_type if route_type in ('walking', 'running') else 'walking'
         db.session.commit()
 
         flash("Route updated.", "success")
         return redirect(url_for('admin.admin_routes'))
 
     return render_template('admin/route_edit.html', route=route, images=get_static_images())
+
+@admin_bp.route('/route/<route_id>/waypoints', methods=['GET', 'POST'])
+@admin_required
+def route_waypoints(route_id):
+    import json as _json
+    route = Route.query.get_or_404(route_id)
+    stops = sorted(route.stops, key=lambda s: s.order)
+
+    if request.method == 'POST':
+        payload = request.get_json() or {}
+        wps = payload.get('waypoints', [])
+        # Validate: each must have lat, lon, after_stop
+        clean = []
+        for w in wps:
+            try:
+                clean.append({
+                    'lat':        float(w['lat']),
+                    'lon':        float(w['lon']),
+                    'after_stop': int(w['after_stop']),
+                })
+            except (KeyError, ValueError, TypeError):
+                continue
+        route.waypoints = clean
+        db.session.commit()
+        return {'ok': True}
+
+    stops_data = [{'name': s.location.name, 'lat': s.location.lat, 'lon': s.location.lon}
+                  for s in stops]
+    return render_template('admin/route_waypoints.html',
+                           route=route,
+                           stops_data=stops_data,
+                           waypoints=route.waypoints or [])
+
 
 @admin_bp.route('/route/<route_id>/delete', methods=['GET', 'POST'])
 @admin_required

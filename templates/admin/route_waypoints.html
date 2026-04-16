@@ -1,0 +1,289 @@
+{% extends "base.html" %}
+{% block title %}Admin | {{ route.name }} — Route Path{% endblock %}
+
+{% block content %}
+<div class="editor-wrap">
+
+  <div class="editor-header">
+    <a href="{{ url_for('admin.edit_route', route_id=route.id) }}" class="editor-back">← {{ route.name }}</a>
+    <span class="editor-header-title">Edit Route Path</span>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <span id="route-distance" class="route-distance-badge"></span>
+      <span id="save-status" class="dialogue-save-status"></span>
+      <button class="admin-btn admin-btn--ghost admin-btn--sm" onclick="fetchAndDraw()">↺ Refresh</button>
+      <button class="admin-btn admin-btn--ghost admin-btn--sm" onclick="clearAll()">Clear all</button>
+      <button class="admin-btn admin-btn--primary admin-btn--sm" onclick="saveWaypoints()">Save path</button>
+    </div>
+  </div>
+
+  <div class="waypoint-editor-hint">
+    <p>
+      <strong>Click the green route line</strong> to insert a waypoint and drag the route through a new point.
+      <strong>Drag</strong> any waypoint to reposition it. <strong>Click</strong> a waypoint to delete it.
+    </p>
+  </div>
+
+  <div class="waypoint-editor-layout">
+    <div id="waypoint-map" class="waypoint-editor-map"></div>
+
+    <!-- Segment breakdown panel -->
+    <div class="waypoint-segments-panel" id="segments-panel">
+      <div class="segments-panel-title">Route breakdown</div>
+      <div id="segments-list" class="segments-list">
+        <p class="admin-hint" style="padding:12px;">Loading route…</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="waypoint-legend">
+    <span class="waypoint-legend-item"><span class="legend-dot legend-dot--stop"></span> Stop (fixed)</span>
+    <span class="waypoint-legend-item"><span class="legend-dot legend-dot--waypoint"></span> Waypoint — click route line to add, drag to move, click to delete</span>
+  </div>
+
+</div>
+
+<script>
+const STOPS     = {{ stops_data | tojson }};
+const SAVED_WPS = {{ waypoints | tojson }};
+const SAVE_URL  = {{ url_for('admin.route_waypoints', route_id=route.id) | tojson }};
+
+// ─── Map ─────────────────────────────────────────────────
+const map = L.map('waypoint-map', { zoomControl: true });
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+  maxZoom: 19
+}).addTo(map);
+
+// ─── Stop markers ─────────────────────────────────────────
+STOPS.forEach((s, i) => {
+  L.marker([s.lat, s.lon], {
+    icon: L.divIcon({
+      className: '',
+      html: `<div class="run-stop-marker">${i + 1}</div>`,
+      iconSize: [32, 32], iconAnchor: [16, 16],
+    }),
+    interactive: false,
+  }).addTo(map).bindTooltip(`Stop ${i + 1}: ${s.name}`, { permanent: false });
+});
+
+if (STOPS.length >= 2) {
+  map.fitBounds(L.latLngBounds(STOPS.map(s => [s.lat, s.lon])).pad(0.25));
+} else if (STOPS.length === 1) {
+  map.setView([STOPS[0].lat, STOPS[0].lon], 15);
+} else {
+  map.setView([53.3498, -6.2603], 14);
+}
+
+// ─── Waypoint state ──────────────────────────────────────
+let waypoints  = [];   // [{lat, lon, after_stop, marker}]
+let legLayers  = [];   // one polyline per segment
+let fetchTimer = null;
+
+// ─── Waypoint marker ─────────────────────────────────────
+const wpIcon = L.divIcon({
+  className: '',
+  html: '<div class="wp-marker"></div>',
+  iconSize: [16, 16], iconAnchor: [8, 8],
+});
+
+function addWaypointMarker(lat, lon, afterStop) {
+  const marker = L.marker([lat, lon], { icon: wpIcon, draggable: true }).addTo(map);
+  const wp = { lat, lon, after_stop: afterStop, marker };
+  waypoints.push(wp);
+
+  marker.on('dragend', () => {
+    const pos = marker.getLatLng();
+    wp.lat = pos.lat;
+    wp.lon = pos.lng;
+    debouncedRefetch();
+  });
+
+  marker.on('click', (e) => {
+    L.DomEvent.stopPropagation(e);
+    map.removeLayer(marker);
+    waypoints = waypoints.filter(w => w !== wp);
+    debouncedRefetch();
+  });
+
+  return wp;
+}
+
+// ─── Sort waypoints within a segment ─────────────────────
+// Order by distance from the segment's START stop (ascending)
+function segmentWaypoints(afterStop) {
+  const start = STOPS[afterStop];
+  return waypoints
+    .filter(w => w.after_stop === afterStop)
+    .sort((a, b) => {
+      const da = Math.hypot(a.lat - start.lat, a.lon - start.lon);
+      const db = Math.hypot(b.lat - start.lat, b.lon - start.lon);
+      return da - db;
+    });
+}
+
+// ─── Fetch each leg separately ────────────────────────────
+async function fetchAndDraw() {
+  if (STOPS.length < 2) {
+    document.getElementById('segments-list').innerHTML =
+      '<p class="admin-hint" style="padding:12px;">Add at least 2 stops to draw a route.</p>';
+    return;
+  }
+
+  // Remove old leg layers
+  legLayers.forEach(l => map.removeLayer(l));
+  legLayers = [];
+
+  let totalDistance = 0;
+  const segmentData = [];   // {stopA, stopB, distance, waypoints}
+
+  for (let i = 0; i < STOPS.length - 1; i++) {
+    const wps = segmentWaypoints(i);
+
+    // Build coordinate string for this leg
+    const seq = [`${STOPS[i].lon},${STOPS[i].lat}`];
+    wps.forEach(w => seq.push(`${w.lon},${w.lat}`));
+    seq.push(`${STOPS[i + 1].lon},${STOPS[i + 1].lat}`);
+
+    try {
+      const res  = await fetch(
+        `https://routing.openstreetmap.de/routed-foot/route/v1/foot/${seq.join(';')}?geometries=geojson&overview=full`
+      );
+      const data = await res.json();
+      const route = data.routes?.[0];
+      if (!route) continue;
+
+      totalDistance += route.distance;
+      const latlngs = route.geometry.coordinates.map(c => [c[1], c[0]]);
+
+      // Draw this leg — clicking it inserts a waypoint assigned to segment i
+      const segIdx = i;
+      const layer = L.polyline(latlngs, {
+        color: '#2E7D52', weight: 6, opacity: 0.85,
+      }).addTo(map);
+
+      layer.on('click', (e) => {
+        L.DomEvent.stopPropagation(e);
+        addWaypointMarker(e.latlng.lat, e.latlng.lng, segIdx);
+        debouncedRefetch();
+      });
+
+      // Hover highlight
+      layer.on('mouseover', () => layer.setStyle({ weight: 9, opacity: 1 }));
+      layer.on('mouseout',  () => layer.setStyle({ weight: 6, opacity: 0.85 }));
+
+      legLayers.push(layer);
+      segmentData.push({
+        stopA: STOPS[i].name,
+        stopB: STOPS[i + 1].name,
+        distance: route.distance,
+        waypoints: wps,
+      });
+
+    } catch (e) {
+      console.error(`Leg ${i} fetch failed:`, e);
+    }
+  }
+
+  // Update distance badge
+  const distEl = document.getElementById('route-distance');
+  distEl.textContent = totalDistance >= 1000
+    ? `${(totalDistance / 1000).toFixed(2)} km`
+    : `${Math.round(totalDistance)} m`;
+
+  // Update segment panel
+  renderSegmentsPanel(segmentData);
+}
+
+// ─── Segment breakdown panel ──────────────────────────────
+function renderSegmentsPanel(segments) {
+  const list = document.getElementById('segments-list');
+  if (!segments.length) {
+    list.innerHTML = '<p class="admin-hint" style="padding:12px;">No route data.</p>';
+    return;
+  }
+
+  list.innerHTML = segments.map((seg, i) => `
+    <div class="segment-row">
+      <div class="segment-row-header">
+        <span class="segment-row-stops">
+          <span class="segment-stop-num">${i + 1}</span>
+          ${seg.stopA}
+          <span class="segment-arrow">→</span>
+          <span class="segment-stop-num">${i + 2}</span>
+          ${seg.stopB}
+        </span>
+        <span class="segment-row-dist">${formatDist(seg.distance)}</span>
+      </div>
+      ${seg.waypoints.length ? `
+        <ol class="segment-wp-list">
+          ${seg.waypoints.map((w, j) => `
+            <li class="segment-wp-item">Via point ${j + 1}</li>
+          `).join('')}
+        </ol>
+      ` : `<p class="segment-no-wps">Click the route to add via points</p>`}
+    </div>
+  `).join('');
+}
+
+function formatDist(m) {
+  return m >= 1000 ? `${(m / 1000).toFixed(2)} km` : `${Math.round(m)} m`;
+}
+
+function debouncedRefetch() {
+  clearTimeout(fetchTimer);
+  fetchTimer = setTimeout(fetchAndDraw, 500);
+}
+
+// ─── Click map background to add waypoint anywhere ───────
+map.on('click', e => {
+  if (STOPS.length < 2) return;
+  const afterStop = nearestSegment(e.latlng.lat, e.latlng.lng);
+  addWaypointMarker(e.latlng.lat, e.latlng.lng, afterStop);
+  debouncedRefetch();
+});
+
+function nearestSegment(lat, lon) {
+  let best = 0, bestDist = Infinity;
+  for (let i = 0; i < STOPS.length - 1; i++) {
+    const mid = {
+      lat: (STOPS[i].lat + STOPS[i + 1].lat) / 2,
+      lon: (STOPS[i].lon + STOPS[i + 1].lon) / 2,
+    };
+    const d = Math.hypot(lat - mid.lat, lon - mid.lon);
+    if (d < bestDist) { bestDist = d; best = i; }
+  }
+  return best;
+}
+
+// ─── Save ─────────────────────────────────────────────────
+async function saveWaypoints() {
+  const statusEl = document.getElementById('save-status');
+  statusEl.textContent = '';
+  const payload = waypoints.map(w => ({
+    lat: w.lat, lon: w.lon, after_stop: w.after_stop,
+  }));
+  try {
+    const res  = await fetch(SAVE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ waypoints: payload }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error();
+    statusEl.textContent = '✓ Saved';
+    setTimeout(() => { statusEl.textContent = ''; }, 2500);
+  } catch {
+    statusEl.textContent = '✗ Error saving';
+  }
+}
+
+function clearAll() {
+  waypoints.forEach(w => map.removeLayer(w.marker));
+  waypoints = [];
+  debouncedRefetch();
+}
+
+// ─── Load saved waypoints & draw ─────────────────────────
+SAVED_WPS.forEach(w => addWaypointMarker(w.lat, w.lon, w.after_stop));
+fetchAndDraw();
+</script>
+{% endblock %}

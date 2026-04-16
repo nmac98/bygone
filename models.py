@@ -43,6 +43,9 @@ class Route(db.Model):
     description = db.Column(db.Text, nullable=True)
     cover_image = db.Column(db.String(500), nullable=True)
 
+    route_type = db.Column(db.String(20), nullable=False, server_default='walking')
+    waypoints  = db.Column(db.JSON, nullable=True)  # [{lat, lon, after_stop}]
+
     stops = db.relationship('RouteStop', backref='route', lazy=True, order_by="RouteStop.order", cascade="all, delete-orphan")
 
 class RouteStop(db.Model):

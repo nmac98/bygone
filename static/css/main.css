@@ -1224,6 +1224,484 @@ html, body {
 
 
 /* ===========================
+   WAYPOINT EDITOR — admin
+   =========================== */
+
+.route-distance-badge {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #3da366;
+    background: rgba(46, 125, 82, 0.15);
+    border: 1px solid #2E7D52;
+    border-radius: 20px;
+    padding: 4px 12px;
+    white-space: nowrap;
+    min-width: 60px;
+    text-align: center;
+}
+
+.waypoint-editor-layout {
+    display: flex;
+    gap: 0;
+    margin: 12px 20px 0;
+    height: calc(100vh - 220px);
+    min-height: 400px;
+}
+
+.waypoint-editor-layout .waypoint-editor-map {
+    flex: 1;
+    height: 100%;
+    margin: 0;
+    border-radius: 12px 0 0 12px;
+    cursor: crosshair;
+}
+
+.waypoint-segments-panel {
+    width: 240px;
+    flex-shrink: 0;
+    background: #111;
+    border: 1px solid #2a2a2a;
+    border-left: none;
+    border-radius: 0 12px 12px 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.segments-panel-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: #666;
+    padding: 12px 14px 8px;
+    border-bottom: 1px solid #222;
+    flex-shrink: 0;
+}
+
+.segments-list {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.segment-row {
+    padding: 10px 14px;
+    border-bottom: 1px solid #1e1e1e;
+}
+
+.segment-row-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.segment-row-stops {
+    font-size: 0.78rem;
+    color: #ccc;
+    line-height: 1.4;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+}
+
+.segment-stop-num {
+    background: #2E7D52;
+    color: #fff;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.segment-arrow {
+    color: #555;
+    font-size: 0.75rem;
+}
+
+.segment-row-dist {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #3da366;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.segment-wp-list {
+    margin: 0;
+    padding-left: 16px;
+    list-style: decimal;
+}
+
+.segment-wp-item {
+    font-size: 0.75rem;
+    color: #f59e0b;
+    padding: 2px 0;
+}
+
+.segment-no-wps {
+    font-size: 0.72rem;
+    color: #444;
+    font-style: italic;
+    margin: 0;
+}
+
+@media (max-width: 640px) {
+    .waypoint-editor-layout {
+        flex-direction: column;
+        height: auto;
+    }
+    .waypoint-editor-layout .waypoint-editor-map {
+        height: 55vh;
+        border-radius: 12px 12px 0 0;
+    }
+    .waypoint-segments-panel {
+        width: 100%;
+        border-left: 1px solid #2a2a2a;
+        border-top: none;
+        border-radius: 0 0 12px 12px;
+        max-height: 220px;
+    }
+}
+
+.waypoint-editor-hint {
+  padding: 12px 20px 4px;
+  color: #aaa;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  max-width: 800px;
+}
+
+.waypoint-editor-map {
+  height: calc(100vh - 200px);
+  min-height: 400px;
+  margin: 12px 20px 0;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: crosshair;
+}
+
+.waypoint-legend {
+  display: flex;
+  gap: 20px;
+  padding: 10px 20px 24px;
+  font-size: 0.8rem;
+  color: #aaa;
+}
+
+.waypoint-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+  border: 2px solid #fff;
+}
+
+.legend-dot--stop     { background: #2E7D52; }
+.legend-dot--waypoint { background: #f59e0b; }
+
+/* Waypoint marker on map */
+.wp-marker {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #f59e0b;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  cursor: grab;
+}
+
+.wp-marker:active { cursor: grabbing; }
+
+/* ===========================
+   RUNNING ROUTE PAGE
+   =========================== */
+
+.run-page {
+  position: fixed;
+  inset: 0;
+  top: 60px; /* below nav */
+  background: #000;
+  display: flex;
+  flex-direction: column;
+}
+
+#run-map {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  z-index: 0;
+}
+
+/* Top bar */
+.run-topbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+.run-back-btn {
+  pointer-events: all;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px;
+  padding: 6px 12px;
+  text-decoration: none;
+  font-size: 1rem;
+  backdrop-filter: blur(4px);
+}
+
+.run-topbar-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.run-route-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+}
+
+.run-stop-progress {
+  font-size: 0.75rem;
+  color: #3da366;
+  font-weight: 500;
+}
+
+/* Stop number markers on map */
+.run-stop-marker {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #2E7D52;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+
+/* GPS position marker pulse */
+.run-position-marker {
+  animation: gps-pulse 2s ease-in-out infinite;
+}
+
+@keyframes gps-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.7; }
+}
+
+/* Instruction banner */
+.run-instruction-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px 20px;
+  background: linear-gradient(to top, rgba(0,0,0,0.92) 60%, transparent 100%);
+}
+
+.run-turn-icon {
+  font-size: 2rem;
+  min-width: 40px;
+  text-align: center;
+  color: #fff;
+  line-height: 1;
+}
+
+.run-instruction-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.run-instruction-main {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.3;
+}
+
+.run-instruction-dist {
+  font-size: 0.85rem;
+  color: #3da366;
+  font-weight: 500;
+}
+
+/* Stop arrival sheet */
+.run-stop-sheet {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 600;
+  transform: translateY(100%);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #111;
+  border-radius: 20px 20px 0 0;
+  border-top: 1px solid #2E7D52;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.run-stop-sheet.active {
+  transform: translateY(0);
+}
+
+.run-stop-sheet-inner {
+  padding: 20px 20px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.run-stop-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #3da366;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.run-stop-name {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+
+.run-stop-dialogue {
+  font-size: 0.92rem;
+  color: #ccc;
+  line-height: 1.6;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.run-continue-btn {
+  margin-top: 8px;
+  padding: 14px 20px;
+  background: #2E7D52;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+}
+
+.run-continue-btn:hover {
+  background: #3da366;
+}
+
+/* ── Simulation panel ────────────────────────────────────── */
+.sim-panel {
+  position: absolute;
+  top: 70px;
+  right: 12px;
+  z-index: 800;
+  background: rgba(0,0,0,0.88);
+  border: 1px solid #2E7D52;
+  border-radius: 12px;
+  padding: 12px 14px;
+  width: 220px;
+  backdrop-filter: blur(6px);
+  color: #fff;
+  font-size: 0.8rem;
+}
+
+.sim-panel-title {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #3da366;
+  margin-bottom: 10px;
+}
+
+.sim-controls {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.sim-btn {
+  flex: 1;
+  padding: 6px 4px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.sim-btn:hover {
+  background: #2E7D52;
+  border-color: #2E7D52;
+}
+
+.sim-speed-row,
+.sim-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.sim-label {
+  font-size: 0.72rem;
+  color: #888;
+  white-space: nowrap;
+  min-width: 44px;
+}
+
+.sim-speed-row input,
+.sim-progress-row input {
+  flex: 1;
+  accent-color: #2E7D52;
+}
+
+.sim-status {
+  font-size: 0.72rem;
+  color: #666;
+  text-align: center;
+  margin-top: 4px;
+}
+
+/* ===========================
    ROUTE PAGE
    =========================== */
 

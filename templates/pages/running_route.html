@@ -1,0 +1,404 @@
+{% extends "base.html" %}
+{% block title %}{{ route.name }} | BYGONE Run{% endblock %}
+
+{% block content %}
+
+<!-- Full-screen running map -->
+<div class="run-page">
+
+  <div id="run-map"></div>
+
+  <!-- Top bar: route name + stop progress -->
+  <div class="run-topbar">
+    <a class="run-back-btn" href="{{ url_for('main.tours') }}">←</a>
+    <div class="run-topbar-info">
+      <span class="run-route-name">{{ route.name }}</span>
+      <span class="run-stop-progress" id="run-stop-progress">Loading route…</span>
+    </div>
+  </div>
+
+  <!-- Instruction banner (bottom, above stop sheet) -->
+  <div class="run-instruction-bar" id="run-instruction-bar">
+    <div class="run-turn-icon" id="run-turn-icon">↑</div>
+    <div class="run-instruction-text">
+      <div class="run-instruction-main" id="run-instruction-main">Calculating route…</div>
+      <div class="run-instruction-dist" id="run-instruction-dist"></div>
+    </div>
+  </div>
+
+  <!-- Stop arrival sheet (slides up when near a stop) -->
+  <div class="run-stop-sheet" id="run-stop-sheet">
+    <div class="run-stop-sheet-inner">
+      <div class="run-stop-badge" id="run-stop-badge">Stop 1</div>
+      <h2 class="run-stop-name" id="run-stop-name"></h2>
+      <div class="run-stop-dialogue" id="run-stop-dialogue"></div>
+      <button class="run-continue-btn" id="run-continue-btn" onclick="dismissStop()">
+        Continue running →
+      </button>
+    </div>
+  </div>
+
+  <!-- Simulation panel (visible when ?simulate=1 in URL) -->
+  <div class="sim-panel" id="sim-panel" style="display:none">
+    <div class="sim-panel-title">🖥 Simulation</div>
+    <div class="sim-controls">
+      <button class="sim-btn" id="sim-play-btn" onclick="simToggle()">▶ Play</button>
+      <button class="sim-btn" id="sim-step-btn" onclick="simStep()">→ Step</button>
+      <button class="sim-btn" onclick="simReset()">↺ Reset</button>
+    </div>
+    <div class="sim-speed-row">
+      <span class="sim-label">Speed</span>
+      <input type="range" id="sim-speed" min="1" max="20" value="5"
+             oninput="simSpeedLabel.textContent = this.value + '×'">
+      <span class="sim-label" id="simSpeedLabel">5×</span>
+    </div>
+    <div class="sim-progress-row">
+      <span class="sim-label">Position</span>
+      <input type="range" id="sim-scrub" min="0" value="0"
+             oninput="simScrub(parseInt(this.value))">
+    </div>
+    <div class="sim-status" id="sim-status">Idle</div>
+  </div>
+
+</div>
+
+<script>
+// ─── Data ────────────────────────────────────────────────
+const STOPS     = {{ stops_data | tojson }};
+const WAYPOINTS = {{ waypoints | tojson }};
+const SIM_MODE  = new URLSearchParams(location.search).get('simulate') === '1';
+
+// ─── Map setup ───────────────────────────────────────────
+const map = L.map('run-map', {
+  zoomControl: false,
+  attributionControl: false,
+}).setView([53.3498, -6.2603], 16);
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+  maxZoom: 19,
+}).addTo(map);
+
+// User position marker
+const positionMarker = L.circleMarker([53.3498, -6.2603], {
+  radius: 10,
+  fillColor: '#2E7D52',
+  fillOpacity: 1,
+  color: '#fff',
+  weight: 3,
+  className: 'run-position-marker',
+}).addTo(map);
+
+// Accuracy circle
+const accuracyCircle = L.circle([53.3498, -6.2603], {
+  radius: 20,
+  color: '#2E7D52',
+  fillColor: '#2E7D52',
+  fillOpacity: 0.1,
+  weight: 1,
+}).addTo(map);
+
+// Stop markers
+STOPS.forEach((stop, i) => {
+  L.marker([stop.lat, stop.lon], {
+    icon: L.divIcon({
+      className: '',
+      html: `<div class="run-stop-marker">${i + 1}</div>`,
+      iconSize: [32, 32],
+      iconAnchor: [16, 16],
+    }),
+  }).addTo(map).bindPopup(`<b>Stop ${i + 1}: ${stop.name}</b>`);
+});
+
+// ─── Route geometry (OSRM) ───────────────────────────────
+let routeCoords = [];   // flat array of [lat, lon] — full polyline
+let allSteps    = [];   // flat list of instruction steps
+let routeLayer  = null;
+
+async function fetchRoute() {
+  if (STOPS.length < 2) {
+    setInstruction('↑', 'Head to the first stop', '');
+    return;
+  }
+
+  // Build coordinate sequence: stop → waypoints for that segment → next stop
+  const seq = [];
+  for (let i = 0; i < STOPS.length; i++) {
+    seq.push(`${STOPS[i].lon},${STOPS[i].lat}`);
+    const start = STOPS[i];
+    const segWps = WAYPOINTS
+      .filter(w => w.after_stop === i)
+      .sort((a, b) => {
+        const da = Math.hypot(a.lat - start.lat, a.lon - start.lon);
+        const db = Math.hypot(b.lat - start.lat, b.lon - start.lon);
+        return da - db;  // closest to start stop comes first
+      });
+    segWps.forEach(w => seq.push(`${w.lon},${w.lat}`));
+  }
+  const coords = seq.join(';');
+  const url = `https://routing.openstreetmap.de/routed-foot/route/v1/foot/${coords}?steps=true&geometries=geojson&overview=full`;
+
+  try {
+    const res  = await fetch(url);
+    const data = await res.json();
+    const route = data.routes?.[0];
+    if (!route) throw new Error('No route returned');
+
+    // Full polyline coords (GeoJSON is [lon, lat] — swap to Leaflet [lat, lon])
+    routeCoords = route.geometry.coordinates.map(c => [c[1], c[0]]);
+
+    if (routeLayer) map.removeLayer(routeLayer);
+    routeLayer = L.polyline(routeCoords, {
+      color: '#2E7D52',
+      weight: 5,
+      opacity: 0.85,
+    }).addTo(map);
+    map.fitBounds(routeLayer.getBounds().pad(0.15));
+
+    // Flatten all steps across all legs
+    allSteps = [];
+    route.legs.forEach((leg, legIdx) => {
+      leg.steps.forEach(step => {
+        allSteps.push({
+          instruction: step.maneuver.instruction || formatManeuver(step.maneuver),
+          distance:    step.distance,
+          lat:         step.maneuver.location[1],
+          lon:         step.maneuver.location[0],
+          type:        step.maneuver.type,
+          modifier:    step.maneuver.modifier || '',
+        });
+      });
+    });
+
+    currentStepIdx = 0;
+    updateInstructionUI();
+    document.getElementById('run-stop-progress').textContent =
+      `Stop 1 of ${STOPS.length}`;
+
+    // Set up sim scrubber max
+    if (SIM_MODE) {
+      document.getElementById('sim-scrub').max = routeCoords.length - 1;
+      document.getElementById('sim-status').textContent = 'Route loaded — hit Play';
+    }
+
+  } catch (e) {
+    console.error('OSRM error:', e);
+    setInstruction('↑', 'Route unavailable — GPS active', '');
+  }
+}
+
+function formatManeuver(m) {
+  const mod = m.modifier ? ` ${m.modifier}` : '';
+  const types = {
+    'turn':         `Turn${mod}`,
+    'depart':       'Head off',
+    'arrive':       'You have arrived',
+    'merge':        `Merge${mod}`,
+    'on ramp':      `Take the ramp${mod}`,
+    'off ramp':     `Take the exit${mod}`,
+    'fork':         `Keep${mod} at the fork`,
+    'end of road':  `Turn${mod} at the end`,
+    'roundabout':   'Take the roundabout',
+    'continue':     `Continue${mod}`,
+  };
+  return types[m.type] || `Continue${mod}`;
+}
+
+// ─── Instruction tracking ────────────────────────────────
+let currentStepIdx  = 0;
+let currentStopIdx  = 0;  // which stop we're heading toward
+let stopDismissed   = false;
+
+function updateInstructionUI() {
+  if (!allSteps.length) return;
+  const step = allSteps[Math.min(currentStepIdx, allSteps.length - 1)];
+  const icon = turnIcon(step.type, step.modifier);
+  const dist = step.distance < 50 ? 'Arriving' : formatDist(step.distance);
+  setInstruction(icon, step.instruction, dist);
+}
+
+function setInstruction(icon, text, dist) {
+  document.getElementById('run-turn-icon').textContent = icon;
+  document.getElementById('run-instruction-main').textContent = text;
+  document.getElementById('run-instruction-dist').textContent = dist;
+}
+
+function turnIcon(type, mod) {
+  if (type === 'arrive') return '🏁';
+  if (type === 'depart') return '↑';
+  if (type === 'roundabout') return '🔄';
+  const m = (mod || '').toLowerCase();
+  if (m.includes('left'))  return '←';
+  if (m.includes('right')) return '→';
+  if (m.includes('uturn')) return '↩';
+  return '↑';
+}
+
+function formatDist(m) {
+  return m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${Math.round(m)} m`;
+}
+
+// ─── Position update (real GPS or simulation) ────────────
+let userLat = null, userLon = null;
+let followMode = true;
+
+function onPositionUpdate(lat, lon, accuracy) {
+  userLat = lat;
+  userLon = lon;
+
+  positionMarker.setLatLng([lat, lon]);
+  accuracyCircle.setLatLng([lat, lon]).setRadius(accuracy || 20);
+
+  if (followMode) map.setView([lat, lon], 17, { animate: true });
+
+  // Advance instruction step
+  if (allSteps.length && currentStepIdx < allSteps.length - 1) {
+    const next = allSteps[currentStepIdx];
+    const d = haversine(lat, lon, next.lat, next.lon);
+    if (d < 25) {
+      currentStepIdx++;
+      updateInstructionUI();
+    }
+  }
+
+  // Check stop arrival
+  if (!stopDismissed && currentStopIdx < STOPS.length) {
+    const stop = STOPS[currentStopIdx];
+    const d = haversine(lat, lon, stop.lat, stop.lon);
+    if (d < 60) showStopArrival(currentStopIdx);
+  }
+}
+
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 +
+            Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) * Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// ─── Stop arrival ─────────────────────────────────────────
+function showStopArrival(idx) {
+  stopDismissed = true;
+  const stop = STOPS[idx];
+  document.getElementById('run-stop-badge').textContent = `Stop ${idx + 1} of ${STOPS.length}`;
+  document.getElementById('run-stop-name').textContent = stop.name;
+  document.getElementById('run-stop-dialogue').textContent = stop.dialogue || '';
+  document.getElementById('run-stop-progress').textContent =
+    `Stop ${idx + 1} of ${STOPS.length}`;
+
+  const btn = document.getElementById('run-continue-btn');
+  if (idx >= STOPS.length - 1) {
+    btn.textContent = '🏁 Finish';
+    btn.onclick = () => { document.getElementById('run-stop-sheet').classList.remove('active'); };
+  } else {
+    btn.textContent = 'Continue running →';
+    btn.onclick = dismissStop;
+  }
+
+  document.getElementById('run-stop-sheet').classList.add('active');
+}
+
+function dismissStop() {
+  document.getElementById('run-stop-sheet').classList.remove('active');
+  currentStopIdx++;
+  stopDismissed = false;
+}
+
+// ─── Real GPS ─────────────────────────────────────────────
+let watchId = null;
+
+function startGPS() {
+  if (!navigator.geolocation) return;
+  watchId = navigator.geolocation.watchPosition(
+    pos => onPositionUpdate(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy),
+    err => console.warn('GPS error:', err),
+    { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 }
+  );
+}
+
+// ─── Simulation ───────────────────────────────────────────
+let simIdx        = 0;
+let simTimer      = null;
+let simPlaying    = false;
+
+function simToggle() {
+  simPlaying ? simPause() : simPlay();
+}
+
+function simPlay() {
+  simPlaying = true;
+  document.getElementById('sim-play-btn').textContent = '⏸ Pause';
+  const speed = parseInt(document.getElementById('sim-speed').value);
+  simTimer = setInterval(() => {
+    for (let i = 0; i < speed; i++) simAdvance();
+  }, 100);
+}
+
+function simPause() {
+  simPlaying = false;
+  clearInterval(simTimer);
+  document.getElementById('sim-play-btn').textContent = '▶ Play';
+}
+
+function simAdvance() {
+  if (!routeCoords.length) return;
+  if (simIdx >= routeCoords.length - 1) {
+    simPause();
+    document.getElementById('sim-status').textContent = 'Route complete';
+    return;
+  }
+  simIdx++;
+  const [lat, lon] = routeCoords[simIdx];
+  document.getElementById('sim-scrub').value = simIdx;
+  document.getElementById('sim-status').textContent =
+    `Point ${simIdx} / ${routeCoords.length - 1}`;
+  onPositionUpdate(lat, lon, 10);
+}
+
+function simStep() {
+  simPause();
+  simAdvance();
+}
+
+function simScrub(idx) {
+  simPause();
+  simIdx = idx;
+  if (!routeCoords[idx]) return;
+  const [lat, lon] = routeCoords[idx];
+  onPositionUpdate(lat, lon, 10);
+}
+
+function simReset() {
+  simPause();
+  simIdx = 0;
+  currentStepIdx = 0;
+  currentStopIdx = 0;
+  stopDismissed  = false;
+  document.getElementById('run-stop-sheet').classList.remove('active');
+  document.getElementById('sim-scrub').value = 0;
+  document.getElementById('sim-status').textContent = 'Reset';
+  if (routeCoords[0]) {
+    const [lat, lon] = routeCoords[0];
+    onPositionUpdate(lat, lon, 10);
+  }
+  updateInstructionUI();
+}
+
+// ─── Tap map to stop following ────────────────────────────
+map.on('drag', () => { followMode = false; });
+map.on('click', () => { followMode = true; });
+
+// ─── Init ─────────────────────────────────────────────────
+fetchRoute().then(() => {
+  if (SIM_MODE) {
+    document.getElementById('sim-panel').style.display = 'block';
+    // Start at first stop's position
+    if (STOPS[0]) onPositionUpdate(STOPS[0].lat, STOPS[0].lon, 10);
+  } else {
+    startGPS();
+  }
+});
+</script>
+
+{% endblock %}
