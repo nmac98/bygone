@@ -18,6 +18,7 @@ def index():
 def explore():
     locations = (
         Location.query
+        .filter_by(hidden=False)
         .options(
             joinedload(Location.supabase_images)
             .joinedload(LocationImage.image)
@@ -75,7 +76,7 @@ def explore():
 
 @main_bp.route("/tours")
 def tours():
-    routes = Route.query.all()
+    routes = Route.query.filter_by(hidden=False).all()
     return render_template("pages/tours.html", routes=routes)
 
 

@@ -85,15 +85,13 @@
               {% endif %}
             </div>
 
-            {# Dialogue may be a list or a single string #}
             {% if dialogue %}
-                {% if dialogue is iterable and dialogue is not string %}
-                    {% for line in dialogue %}
-                        <p>{{ line }}</p>
-                    {% endfor %}
-                {% else %}
-                    <p>{{ dialogue }}</p>
-                {% endif %}
+                {% for para in dialogue.split('\n\n') %}
+                    {% set para = para.strip() %}
+                    {% if para %}
+                        <p>{{ para }}</p>
+                    {% endif %}
+                {% endfor %}
             {% else %}
                 <p>No dialogue available for this stop.</p>
             {% endif %}

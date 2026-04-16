@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Admin | Visibility{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+  <h1>Visibility</h1>
+  <p class="admin-hint">Hidden items are not shown to visitors on the public site.</p>
+
+  <h2 style="margin-top:28px;">Routes</h2>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Stops</th>
+        <th>Visible</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for route in routes %}
+      <tr id="route-row-{{ route.id }}" class="{{ 'vis-row--hidden' if route.hidden else '' }}">
+        <td>
+          <a href="{{ url_for('admin.edit_route', route_id=route.id) }}">{{ route.name }}</a>
+        </td>
+        <td>{{ route.route_type }}</td>
+        <td>{{ route.stops|length }}</td>
+        <td>
+          <button
+            class="vis-toggle {{ 'vis-toggle--off' if route.hidden else 'vis-toggle--on' }}"
+            data-url="{{ url_for('admin.toggle_route_hidden', route_id=route.id) }}"
+            data-row="route-row-{{ route.id }}"
+            onclick="toggleVisibility(this)">
+            {{ 'Hidden' if route.hidden else 'Visible' }}
+          </button>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="admin-hint">No routes.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2 style="margin-top:36px;">Locations</h2>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>ID</th>
+        <th>Visible</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for loc in locations %}
+      <tr id="loc-row-{{ loc.id }}" class="{{ 'vis-row--hidden' if loc.hidden else '' }}">
+        <td>
+          <a href="{{ url_for('admin.edit_location', location_id=loc.id) }}">{{ loc.name }}</a>
+        </td>
+        <td style="color:#888;font-size:0.85rem;">{{ loc.id }}</td>
+        <td>
+          <button
+            class="vis-toggle {{ 'vis-toggle--off' if loc.hidden else 'vis-toggle--on' }}"
+            data-url="{{ url_for('admin.toggle_location_hidden', location_id=loc.id) }}"
+            data-row="loc-row-{{ loc.id }}"
+            onclick="toggleVisibility(this)">
+            {{ 'Hidden' if loc.hidden else 'Visible' }}
+          </button>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="3" class="admin-hint">No locations.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+async function toggleVisibility(btn) {
+  btn.disabled = true;
+  try {
+    const res  = await fetch(btn.dataset.url, { method: 'POST' });
+    const data = await res.json();
+    if (!data.ok) throw new Error();
+
+    const isHidden = data.hidden;
+    btn.textContent = isHidden ? 'Hidden' : 'Visible';
+    btn.className = 'vis-toggle ' + (isHidden ? 'vis-toggle--off' : 'vis-toggle--on');
+
+    const row = document.getElementById(btn.dataset.row);
+    if (isHidden) {
+      row.classList.add('vis-row--hidden');
+    } else {
+      row.classList.remove('vis-row--hidden');
+    }
+  } catch {
+    alert('Could not update visibility. Please try again.');
+  } finally {
+    btn.disabled = false;
+  }
+}
+</script>
+{% endblock %}

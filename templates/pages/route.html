@@ -11,7 +11,7 @@
     {% if route.cover_image %}
     <div class="route-hero-img-wrap">
       <img class="route-hero-img"
-           src="{{ url_for('static', filename='images/' + route.cover_image) }}"
+           src="{{ route.cover_image if route.cover_image.startswith('http') else url_for('static', filename='images/' + route.cover_image) }}"
            alt="{{ route.name }}">
       <div class="route-hero-overlay"></div>
     </div>

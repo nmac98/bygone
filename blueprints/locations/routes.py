@@ -38,7 +38,7 @@ def gallery(loc_id):
         .get(loc_id)
     )
 
-    if not loc:
+    if not loc or loc.hidden:
         abort(404, description="Location not found")
 
     map_data = {

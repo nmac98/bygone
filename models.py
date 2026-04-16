@@ -29,6 +29,7 @@ class Location(db.Model):
     )
 
     category = db.Column(db.Enum(LocationCategory, name="locationcategory"), nullable=False, server_default=LocationCategory.POI.value)
+    hidden   = db.Column(db.Boolean, nullable=False, server_default='false')
 
     @property
     def supabase_image_assets(self):
@@ -45,6 +46,7 @@ class Route(db.Model):
 
     route_type = db.Column(db.String(20), nullable=False, server_default='walking')
     waypoints  = db.Column(db.JSON, nullable=True)  # [{lat, lon, after_stop}]
+    hidden     = db.Column(db.Boolean, nullable=False, server_default='false')
 
     stops = db.relationship('RouteStop', backref='route', lazy=True, order_by="RouteStop.order", cascade="all, delete-orphan")
 

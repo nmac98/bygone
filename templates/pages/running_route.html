@@ -2,45 +2,132 @@
 {% block title %}{{ route.name }} | BYGONE Run{% endblock %}
 
 {% block content %}
+<div class="run-page" id="run-page">
 
-<!-- Full-screen running map -->
-<div class="run-page">
-
+  <!-- Persistent map (always rendered underneath) -->
   <div id="run-map"></div>
 
-  <!-- Top bar: route name + stop progress -->
-  <div class="run-topbar">
-    <a class="run-back-btn" href="{{ url_for('main.tours') }}">←</a>
-    <div class="run-topbar-info">
-      <span class="run-route-name">{{ route.name }}</span>
-      <span class="run-stop-progress" id="run-stop-progress">Loading route…</span>
-    </div>
-  </div>
+  <!-- ══════════════════════════════════════════════════
+       STATE: approach
+       Full-screen map, GPS enable button, bottom summary banner
+       ══════════════════════════════════════════════════ -->
+  <div class="run-overlay run-overlay--approach" id="overlay-approach">
 
-  <!-- Instruction banner (bottom, above stop sheet) -->
-  <div class="run-instruction-bar" id="run-instruction-bar">
-    <div class="run-turn-icon" id="run-turn-icon">↑</div>
-    <div class="run-instruction-text">
-      <div class="run-instruction-main" id="run-instruction-main">Calculating route…</div>
-      <div class="run-instruction-dist" id="run-instruction-dist"></div>
+    <!-- Top bar -->
+    <div class="run-topbar">
+      <a class="run-back-btn" href="{{ url_for('main.tours') }}">←</a>
+      <div class="run-topbar-info">
+        <span class="run-route-name">{{ route.name }}</span>
+        <span class="run-stop-progress" id="approach-distance-label">Getting your location…</span>
+      </div>
     </div>
-  </div>
 
-  <!-- Stop arrival sheet (slides up when near a stop) -->
-  <div class="run-stop-sheet" id="run-stop-sheet">
-    <div class="run-stop-sheet-inner">
-      <div class="run-stop-badge" id="run-stop-badge">Stop 1</div>
-      <h2 class="run-stop-name" id="run-stop-name"></h2>
-      <div class="run-stop-dialogue" id="run-stop-dialogue"></div>
-      <button class="run-continue-btn" id="run-continue-btn" onclick="dismissStop()">
-        Continue running →
+    <!-- GPS enable button (shown until GPS acquired) -->
+    <div class="run-gps-prompt" id="gps-prompt">
+      <button class="run-gps-btn" id="gps-enable-btn" onclick="enableGPS()">
+        📍 Enable GPS
       </button>
+      <p class="run-gps-hint">Tap to allow location access</p>
+    </div>
+
+    <!-- Summary banner at bottom (tap to expand) -->
+    <div class="run-summary-banner" id="summary-banner" onclick="toggleSummary()">
+      <div class="run-summary-pull"></div>
+      <div class="run-summary-collapsed">
+        <span class="run-summary-name">{{ route.name }}</span>
+        <span class="run-summary-stops">{{ stops_data | length }} stops · tap for details</span>
+      </div>
+      <div class="run-summary-expanded" id="summary-expanded" style="display:none">
+        <h3 class="run-summary-title">{{ route.name }}</h3>
+        <p class="run-summary-desc">{{ route.description or '' }}</p>
+        <div class="run-summary-stops-list">
+          {% for s in stops_data %}
+          <div class="run-summary-stop-row">
+            <span class="run-summary-stop-num">{{ loop.index }}</span>
+            <span class="run-summary-stop-name">{{ s.name }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════
+       STATE: stop-info
+       Full-screen overlay showing stop details
+       ══════════════════════════════════════════════════ -->
+  <div class="run-overlay run-overlay--stop-info run-overlay--hidden" id="overlay-stop-info">
+    <div class="run-stop-info-scroll">
+      <div class="run-stop-info-img-wrap" id="stop-info-img-wrap"></div>
+      <div class="run-stop-info-body">
+        <div class="run-stop-badge" id="stop-info-badge">Stop 1</div>
+        <h2 class="run-stop-name" id="stop-info-name"></h2>
+        <p class="run-stop-dialogue" id="stop-info-dialogue"></p>
+        <p class="run-stop-desc" id="stop-info-desc"></p>
+        <button class="run-continue-btn" id="stop-info-action-btn" onclick="stopInfoAction()">
+          Start Run →
+        </button>
+      </div>
     </div>
   </div>
 
-  <!-- Simulation panel (visible when ?simulate=1 in URL) -->
+  <!-- ══════════════════════════════════════════════════
+       STATE: navigation
+       Map top half, next stop panel bottom half
+       ══════════════════════════════════════════════════ -->
+  <div class="run-overlay run-overlay--nav run-overlay--hidden" id="overlay-nav">
+
+    <!-- Top bar over map -->
+    <div class="run-topbar">
+      <a class="run-back-btn" href="{{ url_for('main.tours') }}">←</a>
+      <div class="run-topbar-info">
+        <span class="run-route-name">{{ route.name }}</span>
+        <span class="run-stop-progress" id="nav-stop-progress"></span>
+      </div>
+    </div>
+
+    <!-- Bottom next-stop panel -->
+    <div class="run-nav-panel" id="nav-panel">
+      <div class="run-nav-panel-inner">
+        <div class="run-nav-next-label">Next stop</div>
+        <div class="run-nav-stop-row">
+          <div class="run-nav-stop-img-wrap" id="nav-stop-img-wrap"></div>
+          <div class="run-nav-stop-text">
+            <div class="run-nav-stop-name" id="nav-stop-name"></div>
+            <div class="run-nav-stop-dist" id="nav-stop-dist"></div>
+            <div class="run-nav-stop-desc" id="nav-stop-desc"></div>
+          </div>
+        </div>
+        <!-- Arrives when within 60m -->
+        <button class="run-arrive-btn run-arrive-btn--hidden" id="arrive-btn" onclick="showStopInfo()">
+          I have arrived →
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════
+       STATE: finish
+       Completion overlay
+       ══════════════════════════════════════════════════ -->
+  <div class="run-overlay run-overlay--finish run-overlay--hidden" id="overlay-finish">
+    <div class="run-finish-inner">
+      <div class="run-finish-icon">🏁</div>
+      <h2 class="run-finish-title">Run complete!</h2>
+      <p class="run-finish-subtitle">You completed {{ route.name }}</p>
+      <a class="run-continue-btn" href="{{ url_for('main.tours') }}" style="text-align:center;text-decoration:none;">
+        Back to routes
+      </a>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════
+       Simulation panel (?simulate=1)
+       ══════════════════════════════════════════════════ -->
   <div class="sim-panel" id="sim-panel" style="display:none">
-    <div class="sim-panel-title">🖥 Simulation</div>
+    <div class="sim-panel-title">Simulation</div>
     <div class="sim-controls">
       <button class="sim-btn" id="sim-play-btn" onclick="simToggle()">▶ Play</button>
       <button class="sim-btn" id="sim-step-btn" onclick="simStep()">→ Step</button>
@@ -68,6 +155,12 @@ const STOPS     = {{ stops_data | tojson }};
 const WAYPOINTS = {{ waypoints | tojson }};
 const SIM_MODE  = new URLSearchParams(location.search).get('simulate') === '1';
 
+// ─── State machine ───────────────────────────────────────
+// States: 'approach' | 'stop-info' | 'navigation' | 'finish'
+let appState        = 'approach';
+let currentStopIdx  = 0;   // which stop we're currently heading to (0 = first)
+let stopInfoAction_ = null; // function to call when action button tapped
+
 // ─── Map setup ───────────────────────────────────────────
 const map = L.map('run-map', {
   zoomControl: false,
@@ -88,7 +181,6 @@ const positionMarker = L.circleMarker([53.3498, -6.2603], {
   className: 'run-position-marker',
 }).addTo(map);
 
-// Accuracy circle
 const accuracyCircle = L.circle([53.3498, -6.2603], {
   radius: 20,
   color: '#2E7D52',
@@ -106,44 +198,43 @@ STOPS.forEach((stop, i) => {
       iconSize: [32, 32],
       iconAnchor: [16, 16],
     }),
-  }).addTo(map).bindPopup(`<b>Stop ${i + 1}: ${stop.name}</b>`);
+  }).addTo(map);
 });
 
-// ─── Route geometry (OSRM) ───────────────────────────────
-let routeCoords = [];   // flat array of [lat, lon] — full polyline
-let allSteps    = [];   // flat list of instruction steps
+// Fit map to stops initially
+if (STOPS.length >= 2) {
+  map.fitBounds(L.latLngBounds(STOPS.map(s => [s.lat, s.lon])).pad(0.3));
+} else if (STOPS.length === 1) {
+  map.setView([STOPS[0].lat, STOPS[0].lon], 15);
+}
+
+// ─── Route geometry ──────────────────────────────────────
+let routeCoords = [];
 let routeLayer  = null;
 
 async function fetchRoute() {
-  if (STOPS.length < 2) {
-    setInstruction('↑', 'Head to the first stop', '');
-    return;
-  }
+  if (STOPS.length < 2) return;
 
-  // Build coordinate sequence: stop → waypoints for that segment → next stop
   const seq = [];
   for (let i = 0; i < STOPS.length; i++) {
     seq.push(`${STOPS[i].lon},${STOPS[i].lat}`);
-    const start = STOPS[i];
     const segWps = WAYPOINTS
       .filter(w => w.after_stop === i)
       .sort((a, b) => {
-        const da = Math.hypot(a.lat - start.lat, a.lon - start.lon);
-        const db = Math.hypot(b.lat - start.lat, b.lon - start.lon);
-        return da - db;  // closest to start stop comes first
+        const da = Math.hypot(a.lat - STOPS[i].lat, a.lon - STOPS[i].lon);
+        const db = Math.hypot(b.lat - STOPS[i].lat, b.lon - STOPS[i].lon);
+        return da - db;
       });
     segWps.forEach(w => seq.push(`${w.lon},${w.lat}`));
   }
-  const coords = seq.join(';');
-  const url = `https://routing.openstreetmap.de/routed-foot/route/v1/foot/${coords}?steps=true&geometries=geojson&overview=full`;
 
   try {
+    const url = `https://routing.openstreetmap.de/routed-foot/route/v1/foot/${seq.join(';')}?geometries=geojson&overview=full`;
     const res  = await fetch(url);
     const data = await res.json();
     const route = data.routes?.[0];
-    if (!route) throw new Error('No route returned');
+    if (!route) return;
 
-    // Full polyline coords (GeoJSON is [lon, lat] — swap to Leaflet [lat, lon])
     routeCoords = route.geometry.coordinates.map(c => [c[1], c[0]]);
 
     if (routeLayer) map.removeLayer(routeLayer);
@@ -152,122 +243,225 @@ async function fetchRoute() {
       weight: 5,
       opacity: 0.85,
     }).addTo(map);
-    map.fitBounds(routeLayer.getBounds().pad(0.15));
 
-    // Flatten all steps across all legs
-    allSteps = [];
-    route.legs.forEach((leg, legIdx) => {
-      leg.steps.forEach(step => {
-        allSteps.push({
-          instruction: step.maneuver.instruction || formatManeuver(step.maneuver),
-          distance:    step.distance,
-          lat:         step.maneuver.location[1],
-          lon:         step.maneuver.location[0],
-          type:        step.maneuver.type,
-          modifier:    step.maneuver.modifier || '',
-        });
-      });
-    });
-
-    currentStepIdx = 0;
-    updateInstructionUI();
-    document.getElementById('run-stop-progress').textContent =
-      `Stop 1 of ${STOPS.length}`;
-
-    // Set up sim scrubber max
     if (SIM_MODE) {
       document.getElementById('sim-scrub').max = routeCoords.length - 1;
       document.getElementById('sim-status').textContent = 'Route loaded — hit Play';
     }
-
   } catch (e) {
-    console.error('OSRM error:', e);
-    setInstruction('↑', 'Route unavailable — GPS active', '');
+    console.error('Route fetch error:', e);
   }
 }
 
-function formatManeuver(m) {
-  const mod = m.modifier ? ` ${m.modifier}` : '';
-  const types = {
-    'turn':         `Turn${mod}`,
-    'depart':       'Head off',
-    'arrive':       'You have arrived',
-    'merge':        `Merge${mod}`,
-    'on ramp':      `Take the ramp${mod}`,
-    'off ramp':     `Take the exit${mod}`,
-    'fork':         `Keep${mod} at the fork`,
-    'end of road':  `Turn${mod} at the end`,
-    'roundabout':   'Take the roundabout',
-    'continue':     `Continue${mod}`,
-  };
-  return types[m.type] || `Continue${mod}`;
-}
-
-// ─── Instruction tracking ────────────────────────────────
-let currentStepIdx  = 0;
-let currentStopIdx  = 0;  // which stop we're heading toward
-let stopDismissed   = false;
-
-function updateInstructionUI() {
-  if (!allSteps.length) return;
-  const step = allSteps[Math.min(currentStepIdx, allSteps.length - 1)];
-  const icon = turnIcon(step.type, step.modifier);
-  const dist = step.distance < 50 ? 'Arriving' : formatDist(step.distance);
-  setInstruction(icon, step.instruction, dist);
-}
-
-function setInstruction(icon, text, dist) {
-  document.getElementById('run-turn-icon').textContent = icon;
-  document.getElementById('run-instruction-main').textContent = text;
-  document.getElementById('run-instruction-dist').textContent = dist;
-}
-
-function turnIcon(type, mod) {
-  if (type === 'arrive') return '🏁';
-  if (type === 'depart') return '↑';
-  if (type === 'roundabout') return '🔄';
-  const m = (mod || '').toLowerCase();
-  if (m.includes('left'))  return '←';
-  if (m.includes('right')) return '→';
-  if (m.includes('uturn')) return '↩';
-  return '↑';
-}
-
-function formatDist(m) {
-  return m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${Math.round(m)} m`;
-}
-
-// ─── Position update (real GPS or simulation) ────────────
-let userLat = null, userLon = null;
+// ─── GPS ─────────────────────────────────────────────────
+let watchId    = null;
+let gpsActive  = false;
 let followMode = true;
 
-function onPositionUpdate(lat, lon, accuracy) {
-  userLat = lat;
-  userLon = lon;
+function enableGPS() {
+  if (!navigator.geolocation) {
+    document.getElementById('gps-prompt').innerHTML =
+      '<p class="run-gps-hint" style="color:#e55;">GPS not supported on this device.</p>';
+    return;
+  }
 
+  const btn = document.getElementById('gps-enable-btn');
+  btn.textContent = '⏳ Waiting…';
+  btn.disabled = true;
+
+  // getCurrentPosition first to trigger permission from user gesture (iOS requirement)
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      gpsActive = true;
+      document.getElementById('gps-prompt').style.display = 'none';
+      onPositionUpdate(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
+      // Then start continuous watch
+      watchId = navigator.geolocation.watchPosition(
+        p => onPositionUpdate(p.coords.latitude, p.coords.longitude, p.coords.accuracy),
+        err => console.warn('GPS watch error:', err),
+        { enableHighAccuracy: true, maximumAge: 2000, timeout: 15000 }
+      );
+    },
+    err => {
+      btn.textContent = '📍 Enable GPS';
+      btn.disabled = false;
+      console.warn('GPS error:', err);
+    },
+    { enableHighAccuracy: true, timeout: 15000 }
+  );
+}
+
+// ─── Position update ─────────────────────────────────────
+function onPositionUpdate(lat, lon, accuracy) {
   positionMarker.setLatLng([lat, lon]);
   accuracyCircle.setLatLng([lat, lon]).setRadius(accuracy || 20);
 
-  if (followMode) map.setView([lat, lon], 17, { animate: true });
-
-  // Advance instruction step
-  if (allSteps.length && currentStepIdx < allSteps.length - 1) {
-    const next = allSteps[currentStepIdx];
-    const d = haversine(lat, lon, next.lat, next.lon);
-    if (d < 25) {
-      currentStepIdx++;
-      updateInstructionUI();
-    }
+  if (followMode && appState !== 'stop-info' && appState !== 'finish') {
+    map.setView([lat, lon], 17, { animate: true });
   }
 
-  // Check stop arrival
-  if (!stopDismissed && currentStopIdx < STOPS.length) {
-    const stop = STOPS[currentStopIdx];
-    const d = haversine(lat, lon, stop.lat, stop.lon);
-    if (d < 60) showStopArrival(currentStopIdx);
+  if (appState === 'approach') {
+    handleApproachUpdate(lat, lon);
+  } else if (appState === 'navigation') {
+    handleNavUpdate(lat, lon);
   }
 }
 
+// ─── Approach state ──────────────────────────────────────
+function handleApproachUpdate(lat, lon) {
+  if (!STOPS.length) return;
+  const start = STOPS[0];
+  const d = haversine(lat, lon, start.lat, start.lon);
+
+  const label = document.getElementById('approach-distance-label');
+  label.textContent = d < 100
+    ? 'You are at the start! See below ↓'
+    : `${formatDist(d)} to start`;
+
+  // Auto-trigger stop info when within 100m
+  if (d < 100) {
+    enterStopInfo(0, 'start');
+  }
+}
+
+// ─── Navigation state ────────────────────────────────────
+function handleNavUpdate(lat, lon) {
+  const stop = STOPS[currentStopIdx];
+  if (!stop) return;
+  const d = haversine(lat, lon, stop.lat, stop.lon);
+
+  document.getElementById('nav-stop-dist').textContent = formatDist(d) + ' away';
+
+  const arriveBtn = document.getElementById('arrive-btn');
+  if (d < 60) {
+    arriveBtn.classList.remove('run-arrive-btn--hidden');
+  } else {
+    arriveBtn.classList.add('run-arrive-btn--hidden');
+  }
+}
+
+// ─── Enter stop-info state ───────────────────────────────
+function enterStopInfo(stopIdx, context) {
+  // context: 'start' | 'arrival' | (none for first stop at start)
+  appState = 'stop-info';
+  currentStopIdx = stopIdx;
+
+  const stop = STOPS[stopIdx];
+  const isLast = stopIdx >= STOPS.length - 1;
+
+  document.getElementById('stop-info-badge').textContent =
+    `Stop ${stopIdx + 1} of ${STOPS.length}`;
+  document.getElementById('stop-info-name').textContent = stop.name;
+  document.getElementById('stop-info-dialogue').textContent = stop.dialogue || '';
+  document.getElementById('stop-info-desc').textContent = stop.description || '';
+
+  // Cover image
+  const imgWrap = document.getElementById('stop-info-img-wrap');
+  if (stop.img_url) {
+    imgWrap.innerHTML = `<img src="${stop.img_url}" alt="${stop.name}" class="run-stop-info-img">`;
+    imgWrap.style.display = 'block';
+  } else {
+    imgWrap.style.display = 'none';
+  }
+
+  // Action button
+  const btn = document.getElementById('stop-info-action-btn');
+  if (context === 'start') {
+    btn.textContent = 'Start Run →';
+    stopInfoAction_ = startNavigation;
+  } else if (isLast) {
+    btn.textContent = 'Finish 🏁';
+    stopInfoAction_ = enterFinish;
+  } else {
+    btn.textContent = 'Continue running →';
+    stopInfoAction_ = () => enterNavigation(stopIdx + 1);
+  }
+
+  showOverlay('stop-info');
+}
+
+function stopInfoAction() {
+  if (stopInfoAction_) stopInfoAction_();
+}
+
+// ─── Start navigation (called from first stop info) ──────
+function startNavigation() {
+  enterNavigation(1);  // head to stop index 1 (second stop)
+}
+
+// ─── Navigation state entry ──────────────────────────────
+function enterNavigation(targetStopIdx) {
+  appState = 'navigation';
+  currentStopIdx = targetStopIdx;
+
+  if (targetStopIdx >= STOPS.length) {
+    enterFinish();
+    return;
+  }
+
+  const stop = STOPS[targetStopIdx];
+
+  document.getElementById('nav-stop-progress').textContent =
+    `Stop ${targetStopIdx} of ${STOPS.length} done`;
+  document.getElementById('nav-stop-name').textContent = stop.name;
+  document.getElementById('nav-stop-dist').textContent = '';
+  document.getElementById('nav-stop-desc').textContent = stop.description || stop.dialogue || '';
+
+  const imgWrap = document.getElementById('nav-stop-img-wrap');
+  if (stop.img_url) {
+    imgWrap.innerHTML = `<img src="${stop.img_url}" alt="${stop.name}" class="run-nav-stop-img">`;
+    imgWrap.style.display = 'block';
+  } else {
+    imgWrap.style.display = 'none';
+  }
+
+  document.getElementById('arrive-btn').classList.add('run-arrive-btn--hidden');
+
+  showOverlay('navigation');
+  followMode = true;
+}
+
+// Called when "I have arrived" is tapped
+function showStopInfo() {
+  enterStopInfo(currentStopIdx, 'arrival');
+}
+
+// ─── Finish state ─────────────────────────────────────────
+function enterFinish() {
+  appState = 'finish';
+  if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+  showOverlay('finish');
+}
+
+// ─── Overlay switching ───────────────────────────────────
+function showOverlay(name) {
+  ['approach', 'stop-info', 'navigation', 'finish'].forEach(n => {
+    const el = document.getElementById(`overlay-${n}`);
+    if (n === name) {
+      el.classList.remove('run-overlay--hidden');
+    } else {
+      el.classList.add('run-overlay--hidden');
+    }
+  });
+
+  // Resize map on state change (nav panel takes bottom half)
+  if (name === 'navigation') {
+    document.getElementById('run-map').style.height = '55vh';
+  } else {
+    document.getElementById('run-map').style.height = '';
+  }
+  setTimeout(() => map.invalidateSize(), 50);
+}
+
+// ─── Summary banner toggle ───────────────────────────────
+let summaryExpanded = false;
+function toggleSummary() {
+  summaryExpanded = !summaryExpanded;
+  document.getElementById('summary-expanded').style.display =
+    summaryExpanded ? 'block' : 'none';
+}
+
+// ─── Helpers ─────────────────────────────────────────────
 function haversine(lat1, lon1, lat2, lon2) {
   const R = 6371000;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -277,54 +471,19 @@ function haversine(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// ─── Stop arrival ─────────────────────────────────────────
-function showStopArrival(idx) {
-  stopDismissed = true;
-  const stop = STOPS[idx];
-  document.getElementById('run-stop-badge').textContent = `Stop ${idx + 1} of ${STOPS.length}`;
-  document.getElementById('run-stop-name').textContent = stop.name;
-  document.getElementById('run-stop-dialogue').textContent = stop.dialogue || '';
-  document.getElementById('run-stop-progress').textContent =
-    `Stop ${idx + 1} of ${STOPS.length}`;
-
-  const btn = document.getElementById('run-continue-btn');
-  if (idx >= STOPS.length - 1) {
-    btn.textContent = '🏁 Finish';
-    btn.onclick = () => { document.getElementById('run-stop-sheet').classList.remove('active'); };
-  } else {
-    btn.textContent = 'Continue running →';
-    btn.onclick = dismissStop;
-  }
-
-  document.getElementById('run-stop-sheet').classList.add('active');
+function formatDist(m) {
+  return m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${Math.round(m)} m`;
 }
 
-function dismissStop() {
-  document.getElementById('run-stop-sheet').classList.remove('active');
-  currentStopIdx++;
-  stopDismissed = false;
-}
-
-// ─── Real GPS ─────────────────────────────────────────────
-let watchId = null;
-
-function startGPS() {
-  if (!navigator.geolocation) return;
-  watchId = navigator.geolocation.watchPosition(
-    pos => onPositionUpdate(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy),
-    err => console.warn('GPS error:', err),
-    { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 }
-  );
-}
+map.on('drag', () => { followMode = false; });
+map.on('click', () => { followMode = true; });
 
 // ─── Simulation ───────────────────────────────────────────
-let simIdx        = 0;
-let simTimer      = null;
-let simPlaying    = false;
+let simIdx     = 0;
+let simTimer   = null;
+let simPlaying = false;
 
-function simToggle() {
-  simPlaying ? simPause() : simPlay();
-}
+function simToggle() { simPlaying ? simPause() : simPlay(); }
 
 function simPlay() {
   simPlaying = true;
@@ -351,54 +510,51 @@ function simAdvance() {
   simIdx++;
   const [lat, lon] = routeCoords[simIdx];
   document.getElementById('sim-scrub').value = simIdx;
-  document.getElementById('sim-status').textContent =
-    `Point ${simIdx} / ${routeCoords.length - 1}`;
+  document.getElementById('sim-status').textContent = `Point ${simIdx} / ${routeCoords.length - 1}`;
+  // Inject GPS status so sim works without real GPS
+  gpsActive = true;
+  document.getElementById('gps-prompt').style.display = 'none';
   onPositionUpdate(lat, lon, 10);
 }
 
-function simStep() {
-  simPause();
-  simAdvance();
-}
+function simStep() { simPause(); simAdvance(); }
 
 function simScrub(idx) {
   simPause();
   simIdx = idx;
   if (!routeCoords[idx]) return;
   const [lat, lon] = routeCoords[idx];
+  gpsActive = true;
+  document.getElementById('gps-prompt').style.display = 'none';
   onPositionUpdate(lat, lon, 10);
 }
 
 function simReset() {
   simPause();
   simIdx = 0;
-  currentStepIdx = 0;
   currentStopIdx = 0;
-  stopDismissed  = false;
-  document.getElementById('run-stop-sheet').classList.remove('active');
+  appState = 'approach';
   document.getElementById('sim-scrub').value = 0;
   document.getElementById('sim-status').textContent = 'Reset';
-  if (routeCoords[0]) {
-    const [lat, lon] = routeCoords[0];
-    onPositionUpdate(lat, lon, 10);
+  document.getElementById('approach-distance-label').textContent = 'Getting your location…';
+  showOverlay('approach');
+  if (STOPS[0]) {
+    gpsActive = true;
+    document.getElementById('gps-prompt').style.display = 'none';
+    onPositionUpdate(STOPS[0].lat, STOPS[0].lon, 10);
   }
-  updateInstructionUI();
 }
-
-// ─── Tap map to stop following ────────────────────────────
-map.on('drag', () => { followMode = false; });
-map.on('click', () => { followMode = true; });
 
 // ─── Init ─────────────────────────────────────────────────
 fetchRoute().then(() => {
   if (SIM_MODE) {
     document.getElementById('sim-panel').style.display = 'block';
-    // Start at first stop's position
-    if (STOPS[0]) onPositionUpdate(STOPS[0].lat, STOPS[0].lon, 10);
-  } else {
-    startGPS();
+    if (STOPS[0]) {
+      gpsActive = true;
+      document.getElementById('gps-prompt').style.display = 'none';
+      onPositionUpdate(STOPS[0].lat, STOPS[0].lon, 10);
+    }
   }
 });
 </script>
-
 {% endblock %}

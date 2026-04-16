@@ -8,7 +8,7 @@ def view_route(route_name):
     route = Route.query.options(
         joinedload(Route.stops).joinedload(RouteStop.location)
     ).filter_by(name=route_name).first()
-    if not route:
+    if not route or route.hidden:
         abort(404)
 
     stops = sorted(route.stops, key=lambda s: s.order)
@@ -29,6 +29,7 @@ def view_route(route_name):
             "lat": loc.lat,
             "lon": loc.lon,
             "dialogue": stop.dialogue,
+            "description": loc.description or "",
             "img_url": img_url,
         })
 

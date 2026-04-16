@@ -41,16 +41,33 @@
     <div class="form-group">
       <label>Cover Image</label>
       <input type="hidden" name="cover_image" id="cover_image" value="{{ route.cover_image or '' }}">
-      <div class="image-picker">
+      {% if route.cover_image %}
+      <div class="cover-current">
+        <img src="{{ route.cover_image if route.cover_image.startswith('http') else url_for('static', filename='images/' + route.cover_image) }}"
+             alt="Current cover" class="cover-current-thumb">
+        <span class="cover-current-label">Current cover</span>
+        <button type="button" class="admin-btn admin-btn--ghost admin-btn--xs"
+                onclick="selectCoverImage('')">✕ Remove</button>
+      </div>
+      {% endif %}
+      <input type="text" id="cover-search" class="form-control" placeholder="Search images…"
+             oninput="filterCoverImages(this.value)" style="margin:8px 0;">
+      <div class="image-picker" id="image-picker-grid">
         {% for img in images %}
-        <div class="image-picker-item {% if route.cover_image == img %}selected{% endif %}"
-             onclick="selectCoverImage('{{ img }}')" data-filename="{{ img }}">
-          <img src="{{ url_for('static', filename='images/' + img) }}" alt="{{ img }}">
-          <span>{{ img }}</span>
-        </div>
+          {% set orig = (img.files | selectattr("variant","equalto","original") | list | first)
+                        or (img.files | list | first) %}
+          {% if orig %}
+          <div class="image-picker-item {% if route.cover_image == orig.public_url %}selected{% endif %}"
+               onclick="selectCoverImage('{{ orig.public_url }}')"
+               data-url="{{ orig.public_url }}"
+               data-title="{{ (img.title or '') | lower }}">
+            <img src="{{ orig.public_url }}" alt="{{ img.title or '' }}">
+            <span>{{ img.title or '(untitled)' }}{% if img.date %} · {{ img.date }}{% endif %}</span>
+          </div>
+          {% endif %}
         {% endfor %}
       </div>
-      <small class="text-muted">Click an image to select it as the cover. Leave unselected to use the default.</small>
+      <small class="text-muted">Click an image to select it as the cover.</small>
     </div>
 
     <button type="submit" class="btn btn-primary">Save Changes</button>
@@ -65,10 +82,30 @@
 </div>
 
 <script>
-function selectCoverImage(filename) {
-  document.getElementById('cover_image').value = filename;
+function selectCoverImage(url) {
+  document.getElementById('cover_image').value = url;
   document.querySelectorAll('.image-picker-item').forEach(el => el.classList.remove('selected'));
-  document.querySelector(`.image-picker-item[data-filename="${filename}"]`).classList.add('selected');
+  if (url) {
+    const match = document.querySelector(`.image-picker-item[data-url="${CSS.escape(url)}"]`);
+    if (match) match.classList.add('selected');
+  }
+  // Update preview
+  const preview = document.querySelector('.cover-current-thumb');
+  const previewWrap = document.querySelector('.cover-current');
+  if (url && preview) {
+    preview.src = url;
+  } else if (url) {
+    // No preview block yet — refresh is fine on save
+  } else if (previewWrap) {
+    previewWrap.style.display = 'none';
+  }
+}
+
+function filterCoverImages(q) {
+  const term = q.toLowerCase();
+  document.querySelectorAll('#image-picker-grid .image-picker-item').forEach(el => {
+    el.style.display = el.dataset.title.includes(term) ? '' : 'none';
+  });
 }
 </script>
 {% endblock %}

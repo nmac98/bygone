@@ -98,18 +98,30 @@
   <section class="editor-section">
     <div class="editor-section-header">
       <h2 class="editor-section-title">Photos</h2>
-      <a href="{{ url_for('admin.images_upload') }}?location_id={{ location.id }}"
-         class="admin-btn admin-btn--sm admin-btn--ghost">+ Upload photo</a>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="admin-btn admin-btn--ghost admin-btn--sm" onclick="sortByDate()" id="sort-date-btn">
+          Sort others by year
+        </button>
+        <a href="{{ url_for('admin.images_upload') }}?location_id={{ location.id }}"
+           class="admin-btn admin-btn--sm admin-btn--ghost">+ Upload photo</a>
+      </div>
     </div>
 
     {% set photos = location.supabase_images | sort(attribute='sort_order') %}
     {% if photos %}
-    <div class="photo-grid">
+    <p class="admin-hint" style="margin-bottom:10px;">
+      Drag to reorder. The first image is the cover — it appears on the map and at the top of the location page.
+    </p>
+    <div class="photo-grid photo-grid--sortable" id="photo-sortable">
       {% for li in photos %}
         {% set img = li.image %}
         {% set orig = (img.files | selectattr("variant","equalto","original") | list | first)
                       or (img.files | list | first) %}
-        <div class="photo-card">
+        <div class="photo-card" data-image-id="{{ img.id }}">
+          <div class="photo-drag-handle" title="Drag to reorder">⠿</div>
+          {% if loop.first %}
+            <div class="photo-default-badge">Cover</div>
+          {% endif %}
           {% if orig %}
             <img class="photo-thumb" src="{{ orig.public_url }}" alt="{{ img.title or '' }}">
           {% else %}
@@ -120,6 +132,12 @@
             {% if img.date %}<span class="photo-date">{{ img.date }}</span>{% endif %}
           </div>
           <div class="photo-card-actions">
+            {% if not loop.first %}
+            <button class="admin-btn admin-btn--ghost admin-btn--xs"
+                    onclick="setDefault(this)" title="Move to first position">
+              Set cover
+            </button>
+            {% endif %}
             <a href="{{ url_for('admin.images_edit', image_id=img.id) }}"
                class="admin-btn admin-btn--ghost admin-btn--xs">Edit</a>
             <form method="POST"
@@ -490,6 +508,87 @@ function applyAiDraft() {
   const el = document.getElementById(_aiTargetId);
   if (el) el.value = _aiDraftText;
   closeAiModal();
+}
+</script>
+
+<!-- SortableJS -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<script>
+// ── Photo ordering ───────────────────────────────────────
+const REORDER_URL   = {{ url_for('admin.location_images_reorder', location_id=location.id) | tojson }};
+const SORT_DATE_URL = {{ url_for('admin.location_images_sort_by_date', location_id=location.id) | tojson }};
+
+const sortableEl = document.getElementById('photo-sortable');
+
+function getImageIds() {
+  return Array.from(sortableEl.querySelectorAll('.photo-card')).map(c => c.dataset.imageId);
+}
+
+function updateCoverBadges() {
+  sortableEl.querySelectorAll('.photo-card').forEach((card, idx) => {
+    const existing = card.querySelector('.photo-default-badge');
+    if (existing) existing.remove();
+    const setBtn = card.querySelector('button[onclick="setDefault(this)"]');
+
+    if (idx === 0) {
+      const badge = document.createElement('div');
+      badge.className = 'photo-default-badge';
+      badge.textContent = 'Cover';
+      const thumb = card.querySelector('.photo-drag-handle');
+      card.insertBefore(badge, thumb ? thumb.nextSibling : card.firstChild);
+      if (setBtn) setBtn.remove();
+    } else {
+      if (!setBtn) {
+        const actions = card.querySelector('.photo-card-actions');
+        const btn = document.createElement('button');
+        btn.className = 'admin-btn admin-btn--ghost admin-btn--xs';
+        btn.setAttribute('onclick', 'setDefault(this)');
+        btn.title = 'Move to first position';
+        btn.textContent = 'Set cover';
+        actions.insertBefore(btn, actions.firstChild);
+      }
+    }
+  });
+}
+
+async function saveOrder() {
+  await fetch(REORDER_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ image_ids: getImageIds() }),
+  });
+}
+
+if (sortableEl) {
+  Sortable.create(sortableEl, {
+    handle: '.photo-drag-handle',
+    animation: 150,
+    ghostClass: 'photo-card--ghost',
+    onEnd: () => {
+      updateCoverBadges();
+      saveOrder();
+    },
+  });
+}
+
+function setDefault(btn) {
+  const card = btn.closest('.photo-card');
+  sortableEl.insertBefore(card, sortableEl.firstChild);
+  updateCoverBadges();
+  saveOrder();
+}
+
+async function sortByDate() {
+  const btn = document.getElementById('sort-date-btn');
+  btn.disabled = true;
+  btn.textContent = 'Sorting…';
+  try {
+    await fetch(SORT_DATE_URL, { method: 'POST' });
+    location.reload();
+  } catch {
+    btn.disabled = false;
+    btn.textContent = 'Sort others by year';
+  }
 }
 </script>
 {% endblock %}

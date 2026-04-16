@@ -9,7 +9,7 @@
     <div class="tour-grid">
         {% for route in routes %}
         <a class="tour-card" href="{{ url_for('routes_app.view_route', route_name=route.name) }}"
-           style="background-image: url('{{ url_for('static', filename='images/' + route.cover_image) if route.cover_image else url_for('static', filename='images/dame street towards trinity 1890.jpg') }}');">
+           style="background-image: url('{% if route.cover_image %}{% if route.cover_image.startswith('http') %}{{ route.cover_image }}{% else %}{{ url_for('static', filename='images/' + route.cover_image) }}{% endif %}{% else %}{{ url_for('static', filename='images/dame street towards trinity 1890.jpg') }}{% endif %}');">
             <div class="tour-card-overlay"></div>
             <div class="tour-card-body">
                 <span class="tour-card-name">{{ route.name }}</span>

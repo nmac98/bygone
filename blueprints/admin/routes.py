@@ -224,7 +224,8 @@ def new_route():
         flash("Route created.", "success")
         return redirect(url_for('admin.admin_routes'))
 
-    return render_template('admin/route_new.html', images=get_static_images())
+    images = ImageAsset.query.options(joinedload(ImageAsset.files)).order_by(ImageAsset.created_at.desc()).all()
+    return render_template('admin/route_new.html', images=images)
 
 @admin_bp.route('/route/<route_id>/edit', methods=['GET', 'POST'])
 @admin_required
@@ -242,7 +243,8 @@ def edit_route(route_id):
         flash("Route updated.", "success")
         return redirect(url_for('admin.admin_routes'))
 
-    return render_template('admin/route_edit.html', route=route, images=get_static_images())
+    images = ImageAsset.query.options(joinedload(ImageAsset.files)).order_by(ImageAsset.created_at.desc()).all()
+    return render_template('admin/route_edit.html', route=route, images=images)
 
 @admin_bp.route('/route/<route_id>/waypoints', methods=['GET', 'POST'])
 @admin_required
@@ -764,7 +766,7 @@ def chapter_edit(chapter_id):
 
         db.session.commit()
         flash("Chapter updated.", "success")
-        return redirect(url_for("admin.chapter_edit", chapter_id=chapter.id))
+        return redirect(url_for("admin.edit_location", location_id=chapter.location_id))
 
     # Topics library for attach dropdown
     topics = Topic.query.order_by(Topic.title.asc()).all()
@@ -1102,6 +1104,81 @@ def chapter_topic_delete(ct_id):
     db.session.commit()
     flash("Topic removed.", "success")
     return redirect(url_for("admin.edit_location", location_id=location_id))
+
+
+@admin_bp.route("/visibility")
+@admin_required
+def visibility():
+    locations = Location.query.order_by(Location.name).all()
+    routes = Route.query.order_by(Route.name).all()
+    return render_template("admin/visibility.html", locations=locations, routes=routes)
+
+
+@admin_bp.route("/location/<location_id>/toggle-hidden", methods=["POST"])
+@admin_required
+def toggle_location_hidden(location_id):
+    loc = Location.query.get_or_404(location_id)
+    loc.hidden = not loc.hidden
+    db.session.commit()
+    return {"ok": True, "hidden": loc.hidden}
+
+
+@admin_bp.route("/route/<route_id>/toggle-hidden", methods=["POST"])
+@admin_required
+def toggle_route_hidden(route_id):
+    route = Route.query.get_or_404(route_id)
+    route.hidden = not route.hidden
+    db.session.commit()
+    return {"ok": True, "hidden": route.hidden}
+
+
+@admin_bp.route("/location/<location_id>/images/reorder", methods=["POST"])
+@admin_required
+def location_images_reorder(location_id):
+    """Accept {image_ids: [id, id, ...]} and write sort_order 0,1,2,..."""
+    Location.query.get_or_404(location_id)
+    data = request.get_json() or {}
+    image_ids = data.get("image_ids", [])
+    for idx, image_id in enumerate(image_ids):
+        link = LocationImage.query.filter_by(
+            location_id=location_id, image_id=image_id
+        ).first()
+        if link:
+            link.sort_order = idx
+    db.session.commit()
+    return {"ok": True}
+
+
+@admin_bp.route("/location/<location_id>/images/sort-by-date", methods=["POST"])
+@admin_required
+def location_images_sort_by_date(location_id):
+    """Keep sort_order=0 image as default; sort the rest by year ascending."""
+    import re as _re
+    links = (
+        LocationImage.query
+        .options(joinedload(LocationImage.image))
+        .filter_by(location_id=location_id)
+        .all()
+    )
+    if not links:
+        return {"ok": True}
+
+    # Separate default (sort_order == 0 or lowest) from the rest
+    links.sort(key=lambda l: l.sort_order or 0)
+    default_link = links[0]
+    rest = links[1:]
+
+    def year_key(link):
+        match = _re.search(r'\d{4}', link.image.date or '')
+        return int(match.group()) if match else 9999
+
+    rest.sort(key=year_key)
+
+    default_link.sort_order = 0
+    for idx, link in enumerate(rest, start=1):
+        link.sort_order = idx
+    db.session.commit()
+    return {"ok": True}
 
 
 @admin_bp.route("/location/<location_id>/images/<image_id>/detach", methods=["POST"])
