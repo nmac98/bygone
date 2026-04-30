@@ -1248,6 +1248,77 @@ html, body {
     font-weight: 600;
 }
 
+/* NEXT-STOP PROMPT */
+.next-prompt-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 3000;
+    display: none;
+    align-items: flex-end;
+}
+
+.next-prompt-overlay.visible {
+    display: flex;
+}
+
+.next-prompt-sheet {
+    width: 100%;
+    background: #1a1a1a;
+    border-top: 1px solid #333;
+    border-radius: 16px 16px 0 0;
+    padding: 24px 20px 36px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.next-prompt-heading {
+    color: #888;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 0;
+}
+
+.next-prompt-name {
+    color: #fff;
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin: 0 0 4px;
+}
+
+.next-prompt-btn {
+    display: block;
+    text-align: center;
+    padding: 14px;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.next-prompt-btn.maps {
+    background: #3da366;
+    color: #fff;
+}
+
+.next-prompt-btn.app {
+    background: #2a2a2a;
+    color: #fff;
+    border: 1px solid #444;
+}
+
+.next-prompt-cancel {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 0.95rem;
+    padding: 8px;
+    cursor: pointer;
+    text-align: center;
+}
+
 
 /* ===========================
    WAYPOINT EDITOR — admin
@@ -3072,13 +3143,6 @@ small.text-muted {
     flex-wrap: wrap;
 }
 
-.editor-map {
-    height: 260px;
-    border-radius: 8px;
-    overflow: hidden;
-    margin-top: 10px;
-    border: 1px solid #2a2a2a;
-}
 
 /* Photo grid */
 .photo-grid {

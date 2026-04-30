@@ -340,16 +340,42 @@
 
     <div class="nav-section right">
         {% if next_location %}
-            <a 
-                href="{{ url_for('locations.gallery', loc_id=next_location.id) }}?route={{ route_id }}"
-                class="nav-btn"
-            >Next →</a>
+            <button class="nav-btn" onclick="showNextPrompt()">Next →</button>
         {% else %}
             <span class="nav-btn disabled"></span>
         {% endif %}
     </div>
 
 </div>
+
+{% if next_location %}
+<div id="next-prompt-overlay" class="next-prompt-overlay">
+  <div class="next-prompt-sheet">
+    <p class="next-prompt-heading">Next stop</p>
+    <p class="next-prompt-name">{{ next_location.name }}</p>
+    <a href="https://www.google.com/maps/dir/?api=1&destination={{ next_location.lat }},{{ next_location.lon }}"
+       target="_blank" rel="noopener" class="next-prompt-btn maps">
+      Open in Google Maps
+    </a>
+    <a href="{{ url_for('locations.gallery', loc_id=next_location.id) }}?route={{ route_id }}"
+       class="next-prompt-btn app">
+      Continue in app →
+    </a>
+    <button class="next-prompt-cancel" onclick="closeNextPrompt()">Cancel</button>
+  </div>
+</div>
+<script>
+  function showNextPrompt() {
+    document.getElementById('next-prompt-overlay').classList.add('visible');
+  }
+  function closeNextPrompt() {
+    document.getElementById('next-prompt-overlay').classList.remove('visible');
+  }
+  document.getElementById('next-prompt-overlay').addEventListener('click', function(e) {
+    if (e.target === this) closeNextPrompt();
+  });
+</script>
+{% endif %}
 
 {% endif %}
 

@@ -211,6 +211,15 @@ landing-map-section{
     }
 }
 
+/* Admin location edit map */
+.editor-map {
+    height: 260px;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 10px;
+    border: 1px solid #2a2a2a;
+}
+
 /* Custom map markers */
 .map-marker-location {
     width: 14px;
